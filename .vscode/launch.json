@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Create React App",
+      "request": "launch",
+      "type": "chrome",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/src",
+      "preLaunchTask": "npm: start",
+      "runtimeArgs": [
+        "--remote-debugging-port=9222",
+        "--profile-directory=Profile 1",
+        "--start-fullscreen" // Launch Chrome in fulw2eq    lscreen mode
+      ],
+    },
+    {
+      "name": "Debug Create React App",
+      "request": "attach",
+      "type": "chrome",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/src"
+    },
+  ]
+}

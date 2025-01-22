@@ -1,0 +1,15 @@
+{
+  "workbench.colorTheme": "August - Ariake Dark",
+  "workbench.colorCustomizations": {
+    "titleBar.activeBackground": "#ffb6c1", // Pastel pink
+    "titleBar.activeForeground": "#000000", // Black
+    "titleBar.inactiveBackground": "#ffc0cb", // Light pastel pink
+    "titleBar.inactiveForeground": "#000000", // Black
+    "activityBar.background": "#ffb6c1", // Pastel pink
+    "activityBar.foreground": "#000000", // Black
+    "statusBar.background": "#ffb6c1", // Pastel pink
+    "statusBar.foreground": "#000000" // Black
+  },
+  "window.zoomLevel": 1,
+  "editor.defaultFormatter": "esbenp.prettier-vscode"
+}
