@@ -11,5 +11,8 @@
     "statusBar.foreground": "#000000" // Black
   },
   "window.zoomLevel": 1,
-  "editor.defaultFormatter": "esbenp.prettier-vscode"
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "cSpell.words": [
+    "noliveview"
+  ]
 }

@@ -139,7 +139,14 @@ const SceneManager: React.FC = () => {
         fullWidth
       >
         {scenes.map(({ name }) => (
-          <ToggleButton key={name} value={name}>
+          <ToggleButton
+            key={name}
+            value={name}
+            sx={{
+              my: 1,
+              borderLeft: "1px solid rgba(255, 255, 255, 0.12) !important",
+            }}
+          >
             {name}
           </ToggleButton>
         ))}

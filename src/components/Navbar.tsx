@@ -22,8 +22,8 @@ const Navbar = ({ value, handleChange }: NavbarProps) => {
           value={value}
           onChange={handleChange}
         >
-          <Tab label="Camera Control" value={0} />
-          <Tab label="OBS Control" value={1} />
+          <Tab label="Camera Control" value={1} />
+          <Tab label="OBS Control" value={2} />
         </Tabs>
       </Box>
     </AppBar>
