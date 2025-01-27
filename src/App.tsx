@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { CssBaseline, Box, Stack, Divider } from "@mui/material";
+import { CssBaseline, Stack, Divider } from "@mui/material";
 import { ThemeProvider } from "@mui/material/styles";
 import Navbar from "./components/Navbar";
 import CameraSelector from "./components/CameraSelector";

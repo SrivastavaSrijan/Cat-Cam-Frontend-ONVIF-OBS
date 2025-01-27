@@ -2,11 +2,12 @@ import React, { FC, useRef } from "react";
 import videojs from "video.js";
 import "video.js/dist/video-js.css";
 import VideoJS from "./VideoJS";
+import { API_BASE_URL } from "../config";
 
 const HLSPlayer: FC<{ streamKey: string }> = ({ streamKey }) => {
   const videoRef = useRef(null);
 
-  const apiUrl = process.env.REACT_APP_API_BASE_URL?.replace(/:\d+$/, ":8080");
+  const apiUrl = API_BASE_URL.replace(/:\d+$/, ":8080");
   const videoJsOptions = {
     autoplay: "muted",
     controls: true,
