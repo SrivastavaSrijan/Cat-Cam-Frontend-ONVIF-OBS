@@ -9,7 +9,8 @@ import darkTheme from "./theme";
 import { SelectedCameraProvider } from "./utils/useSelectedCamera";
 import RunnerScript from "./components/RunnerScript";
 import SceneManager from "./components/SceneManager";
-import LiveStream from "./components/LiveStream";
+import { TwitchPlayer } from "react-twitch-embed";
+import { API_BASE_URL } from "./config";
 
 const App: React.FC = () => {
   const [value, setValue] = useState(1);
@@ -32,7 +33,16 @@ const App: React.FC = () => {
         <Stack gap={4} sx={{ p: 1 }}>
           {isLiveView && (
             <>
-              <LiveStream streamKey="mosaic" />
+              <TwitchPlayer
+                width="95vw"
+                channel="srijansrivastava"
+                autoplay
+                parent={API_BASE_URL.replace(/:\d+$/, "").replace(
+                  "http://",
+                  ""
+                )}
+                muted
+              />
               <Divider variant="middle" />
             </>
           )}

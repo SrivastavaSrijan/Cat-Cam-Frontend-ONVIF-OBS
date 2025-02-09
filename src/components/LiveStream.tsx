@@ -1,44 +1,43 @@
-import React, { FC, useRef } from "react";
-import videojs from "video.js";
-import "video.js/dist/video-js.css";
-import VideoJS from "./VideoJS";
+import React, { FC, useEffect, useState } from "react";
+import ReactOvenPlayer, { ReactOvenPlayerState } from "./OvenPlayer";
 import { API_BASE_URL } from "../config";
 
 const HLSPlayer: FC<{ streamKey: string }> = ({ streamKey }) => {
-  const videoRef = useRef(null);
+  const [state, setState] = useState<ReactOvenPlayerState | null>(null);
+  const apiUrl =
+    API_BASE_URL.replace(/:\d+$/, ":3333").replace("http", "ws") +
+    `/app/${streamKey}?direction=send`;
 
-  const apiUrl = API_BASE_URL.replace(/:\d+$/, ":8080");
-  const videoJsOptions = {
-    autoplay: "muted",
-    controls: true,
-    responsive: true,
-    fluid: true,
-    preload: "auto",
-    muted: true,
-    sources: [
-      {
-        src: `${apiUrl}/hls/${streamKey}.m3u8`,
-        type: "application/x-mpegURL",
-      },
-    ],
-  };
-
-  const handlePlayerReady = (player: any) => {
-    videoRef.current = player;
-
-    // You can handle player events here, for example:
-    player.on("waiting", () => {
-      videojs.log("player is waiting");
-    });
-
-    player.on("dispose", () => {
-      videojs.log("player will dispose");
-    });
-  };
+  useEffect(() => {
+    state?.instance?.pause();
+  }, [state]);
 
   return (
     <div>
-      <VideoJS options={videoJsOptions} onReady={handlePlayerReady} />
+      <ReactOvenPlayer
+        wrapperStyles={{
+          minWidth: 500,
+        }}
+        setState={setState}
+        config={{
+          autoStart: true,
+          autoFallback: true,
+          controls: true,
+          showBigPlayButton: false,
+          mute: true,
+          webrtcConfig: {
+            timeoutMaxRetry: 5,
+            connectionTimeout: 10000,
+          },
+
+          sources: [
+            {
+              type: "webrtc",
+              file: apiUrl,
+            },
+          ],
+        }}
+      />
     </div>
   );
 };

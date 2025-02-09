@@ -18,10 +18,26 @@ const SceneManager: React.FC = () => {
   const [transformation, setTransformation] = useState<string>("Mosaic");
   const [loading, setLoading] = useState(false);
 
-  // Fetch available scenes
-  const fetchScenes = () => {
+  const reconnectIfNeeded = async () => {
     setLoading(true);
-    fetchWrapper(
+    await fetchWrapper(
+      `${API_BASE_URL}/obs/reconnect`,
+      "POST",
+      undefined,
+      (response: GetSceneResponse) => {
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Failed to fetch scenes:", error);
+        setLoading(false);
+      }
+    );
+  };
+
+  // Fetch available scenes
+  const fetchScenes = async () => {
+    setLoading(true);
+    await fetchWrapper(
       `${API_BASE_URL}/obs/scenes`,
       "GET",
       undefined,
@@ -99,8 +115,9 @@ const SceneManager: React.FC = () => {
           {loading && <CircularProgress color="primary" size={16} />}
           <IconButton
             color="primary"
-            onClick={() => {
-              fetchScenes();
+            onClick={async () => {
+              await reconnectIfNeeded();
+              await fetchScenes();
             }}
           >
             <Refresh />
