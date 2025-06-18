@@ -1,1 +1,31 @@
-export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://ssvsrijan.ddns.net:5000";
+export const API_BASE_URL =
+  process.env.REACT_APP_API_BASE_URL || "http://ssvsrijan.ddns.net:5000";
+
+export const WEBSOCKET_URL = API_BASE_URL.replace(/:\d+$/, ":3333").replace(
+  "http",
+  "ws"
+);
+
+export const CAMERA_ENDPOINTS = {
+  STATUS: "/ptz/status",
+  MOVE: "/ptz/move",
+  PRESETS: "/ptz/presets",
+  GOTO_PRESET: "/ptz/goto_preset",
+  SWITCH_CAMERA: "/ptz/switch_camera",
+  MOVEMENT_SPEED: "/ptz/movement_speed",
+  IMAGING: "/ptz/imaging",
+  NIGHT_MODE: "/ptz/night_mode",
+  CAMERAS: "/ptz/cameras",
+  CONTINUOUS_MOVE: "/ptz/continuous_move",
+  STOP: "/ptz/stop",
+  MOVEMENT_STATUS: "/ptz/movement_status", // Add missing endpoint
+} as const;
+
+export const OBS_ENDPOINTS = {
+  SCENES: "/obs/scenes",
+  CURRENT_SCENE: "/obs/current_scene",
+  SWITCH_SCENE: "/obs/switch_scene",
+  TRANSFORM: "/obs/transform",
+  CURRENT_TRANSFORMATION: "/obs/current_transformation",
+  RECONNECT: "/obs/reconnect",
+} as const;
