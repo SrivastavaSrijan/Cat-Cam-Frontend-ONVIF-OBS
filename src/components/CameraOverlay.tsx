@@ -104,11 +104,12 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ open, onClose }) => {
           alignItems={"center"}
           top={10}
           zIndex={10}
-          width="calc(100% - 48px)"
+          width="calc(100% - 32px)"
           mx="auto"
+          overflow={"hidden"}
         >
           {/* Mode Indicator */}
-          <Box onClick={handleDoubleTap}>
+          <Box onClick={handleDoubleTap} display={"none"}>
             <ToggleButtonGroup
               value={cameraMode}
               exclusive
@@ -127,13 +128,14 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ open, onClose }) => {
               </ToggleButton>
             </ToggleButtonGroup>
           </Box>
+          <Box flex={1} />
 
           <Stack direction="row" spacing={1}>
-            <IconButton onClick={handleHelpClick}>
-              <Info />
+            <IconButton onClick={handleHelpClick} size="small">
+              <Info fontSize="inherit" />
             </IconButton>
-            <IconButton onClick={onClose}>
-              <Close />
+            <IconButton onClick={onClose} size="small">
+              <Close fontSize="inherit" />
             </IconButton>
           </Stack>
         </Stack>

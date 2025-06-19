@@ -129,7 +129,6 @@ const App: React.FC = () => {
                 <CameraSelector />
                 <CameraControl />
                 <MjpegPlayer
-                  streamUrl={`${API_BASE_URL}${OBS_ENDPOINTS.MJPEG_STREAM}`}
                   title="SSV Cam"
                   height={200}
                   autoPlay={true}

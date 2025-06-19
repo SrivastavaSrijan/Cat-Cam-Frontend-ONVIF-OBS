@@ -107,6 +107,15 @@ export const useApi = () => {
     [apiCall]
   );
 
+  const obsCurrentTransformation = useCallback(
+    () =>
+      apiCall<{
+        layout_mode: "grid" | "highlight";
+        highlighted_source: string;
+      }>(OBS_ENDPOINTS.CURRENT_TRANSFORMATION),
+    [apiCall]
+  );
+
   const obsSwitchScene = useCallback(
     (sceneName: string) =>
       apiCall(OBS_ENDPOINTS.SWITCH_SCENE, "POST", { scene_name: sceneName }),
@@ -183,6 +192,7 @@ export const useApi = () => {
     stopMove,
     moveCamera,
     // OBS operations
+    obsCurrentTransformation,
     obsTransform,
     obsSwitchScene,
     obsReconnect,

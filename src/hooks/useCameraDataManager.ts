@@ -55,11 +55,14 @@ export const useCameraDataManager = () => {
   const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
   const [allCameras, setAllCameras] = useState<CameraInfo[]>([]);
   const [camerasLoaded, setCamerasLoaded] = useState(false);
+  const [currentTransformation, setCurrentTransformation] = useState<
+    "highlight" | "grid"
+  >("grid");
 
   const { loading, withLoading } = useLoading();
   const { showError, showSuccess } = useNotification();
   const api = useApi();
-  const { switchStreamView } = useOBSControl();
+  const { switchStreamView, getCurrentTransformation } = useOBSControl();
 
   const loadingRef = useRef<Set<string>>(new Set());
   const callbacksRef = useRef<Record<string, Set<CameraDataCallback>>>({});
@@ -276,10 +279,46 @@ export const useCameraDataManager = () => {
       setAllCameras(cameras);
       setCamerasLoaded(true);
 
-      // Auto-select first online camera if none selected
+      // Check current OBS transformation to see if a camera is already highlighted
+      try {
+        const currentTransformation = await getCurrentTransformation();
+        setCurrentTransformation(currentTransformation?.layout_mode || "grid");
+        if (
+          currentTransformation?.layout_mode === "highlight" &&
+          currentTransformation?.highlighted_source
+        ) {
+          // Check if the highlighted source corresponds to an online camera
+          const onlineCameras = cameras.filter(
+            (cam) => cam.status === "online"
+          );
+          const highlightedCamera = onlineCameras.find(
+            (cam) => cam.nickname === currentTransformation.highlighted_source
+          );
+
+          if (highlightedCamera) {
+            setSelectedCamera(highlightedCamera.nickname);
+            console.log(
+              "Auto-selected camera from current OBS highlight:",
+              highlightedCamera.nickname
+            );
+            return; // Exit early, don't auto-select first camera
+          }
+        }
+      } catch (error) {
+        console.warn(
+          "Failed to get current transformation, will use default selection:",
+          error
+        );
+      }
+
+      // Fallback: Auto-select first online camera if none selected and no highlighted source
       const onlineCameras = cameras.filter((cam) => cam.status === "online");
       if (!selectedCamera && onlineCameras.length > 0) {
         setSelectedCamera(onlineCameras[0].nickname);
+        console.log(
+          "Auto-selected first online camera:",
+          onlineCameras[0].nickname
+        );
       }
 
       console.log(
@@ -291,7 +330,7 @@ export const useCameraDataManager = () => {
     } finally {
       cameraListLoadingRef.current = false;
     }
-  }, [api, camerasLoaded, selectedCamera, showError]);
+  }, [api, camerasLoaded, selectedCamera, showError, getCurrentTransformation]);
 
   const selectCamera = useCallback(
     (nickname: string) => {
@@ -333,6 +372,7 @@ export const useCameraDataManager = () => {
       isLoadingCameras: cameraListLoadingRef.current,
       loadCameraList,
       selectCamera,
+      currentTransformation,
     }),
     [
       subscribeToCamera,
@@ -351,6 +391,7 @@ export const useCameraDataManager = () => {
       totalCameraCount,
       loadCameraList,
       selectCamera,
+      currentTransformation,
     ]
   );
 };

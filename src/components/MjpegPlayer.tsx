@@ -11,17 +11,15 @@ import {
 import {
   PlayArrow,
   Pause,
-  VolumeOff,
   Fullscreen,
   FullscreenExit,
   Refresh,
+  PictureInPicture,
 } from "@mui/icons-material";
 import StreamControls from "./StreamControls";
 import { useMjpegStream } from "../hooks";
-import { MJPEG_ENDPOINTS } from "../config";
 
 interface MjpegPlayerProps {
-  streamUrl: string;
   title?: string;
   width?: number | string;
   height?: number | string;
@@ -29,9 +27,11 @@ interface MjpegPlayerProps {
   controls?: boolean;
   className?: string;
 }
+// Base64 placeholder image (simple camera icon)
+const placeholderImage =
+  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDIwMCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTUwIiBmaWxsPSIjMzMzIi8+CjxwYXRoIGQ9Ik02MCA2MEgxNDBWOTBINjBWNjBaIiBzdHJva2U9IiM3NzciIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgo8Y2lyY2xlIGN4PSIxMDAiIGN5PSI3NSIgcj0iMTIiIHN0cm9rZT0iIzc3NyIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+CjxjaXJjbGUgY3g9IjEwMCIgY3k9Ijc1IiByPSI2IiBmaWxsPSIjNzc3Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTIwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNzc3IiBmb250LXNpemU9IjEyIj5ObyBTdHJlYW08L3RleHQ+Cjwvc3ZnPgo=";
 
 const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
-  streamUrl,
   title = "MJPEG Stream",
   width = "100%",
   height = 500,
@@ -47,48 +47,29 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [streamSrc, setStreamSrc] = useState<string>("");
-
-  // Base64 placeholder image (simple camera icon)
-  const placeholderImage =
-    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDIwMCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTUwIiBmaWxsPSIjMzMzIi8+CjxwYXRoIGQ9Ik02MCA2MEgxNDBWOTBINjBWNjBaIiBzdHJva2U9IiM3NzciIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgo8Y2lyY2xlIGN4PSIxMDAiIGN5PSI3NSIgcj0iMTIiIHN0cm9rZT0iIzc3NyIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+CjxjaXJjbGUgY3g9IjEwMCIgY3k9Ijc1IiByPSI2IiBmaWxsPSIjNzc3Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTIwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNzc3IiBmb250LXNpemU9IjEyIj5ObyBTdHJlYW08L3RleHQ+Cjwvc3ZnPgo=";
+  const [isPipSupported, setIsPipSupported] = useState(false);
 
   // Use MJPEG stream hook
-  const { isStreaming, streamPort } = useMjpegStream();
+  const { isStreaming, streamUrl } = useMjpegStream();
+
+  // Check for PiP support
+  useEffect(() => {
+    setIsPipSupported("pictureInPictureEnabled" in document);
+  }, []);
 
   const startStream = useCallback(() => {
+    if (!streamUrl) {
+      setError("No stream URL available");
+      setIsLoading(false);
+      return;
+    }
+
     // Clear any existing timeout
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
     }
 
-    // Determine which stream URL to use
-    let currentStreamUrl = streamUrl;
-    if (isStreaming && streamPort) {
-      currentStreamUrl = `${MJPEG_ENDPOINTS.STREAM_URL}`;
-    }
-
-    // Check for unsafe ports
-    try {
-      const url = new URL(currentStreamUrl);
-      const port = Number.parseInt(url.port);
-      const unsafePorts = [
-        6000, 6001, 6002, 6003, 6004, 6005, 6006, 6007, 6008, 6009, 6010,
-      ];
-      if (unsafePorts.includes(port)) {
-        setError(
-          `Port ${port} is blocked by browsers for security reasons. Please use a safe port like 8080, 8000, or 3000.`
-        );
-        setIsLoading(false);
-        return;
-      }
-    } catch (urlError) {
-      setError(`Invalid stream URL: ${currentStreamUrl}`);
-      setIsLoading(false);
-      return;
-    }
-
-    // Don't add cache busting for MJPEG streams - it can interfere
-    setStreamSrc(currentStreamUrl);
+    setStreamSrc(streamUrl);
     setIsPlaying(true);
     setError(null);
     setIsLoading(true);
@@ -96,38 +77,36 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
     // Set a timeout to handle stuck loading
     loadingTimeoutRef.current = setTimeout(() => {
       setIsLoading(false);
-      setError(`Stream loading timeout. URL: ${currentStreamUrl}`);
+      setError(`Stream loading timeout. URL: ${streamUrl}`);
     }, 8000);
-  }, [isStreaming, streamPort, streamUrl]);
+  }, [streamUrl]);
 
-  // Auto-refresh when stream status or port changes
+  // Handle stream status changes
   useEffect(() => {
-    if (isStreaming && streamPort) {
-      // Stream just became available, auto-start/refresh
-      setTimeout(() => {
-        setIsPlaying(true);
-        startStream();
-      }, 500);
-    } else if (!isStreaming && isPlaying) {
+    if (isStreaming && streamUrl && isPlaying) {
+      // Stream is available and we want to play
+      startStream();
+    } else if (!isStreaming) {
       // Stream stopped, show placeholder
       setStreamSrc(placeholderImage);
       setError("Stream is not running");
       setIsLoading(false);
     }
-  }, [isStreaming, streamPort, startStream, isPlaying]);
+  }, [isStreaming, streamUrl, isPlaying, startStream]);
 
-  // Only restart when stream becomes available
+  // Auto-start when stream becomes available
   useEffect(() => {
-    if (isPlaying && isStreaming && streamPort) {
-      setTimeout(() => startStream(), 200);
+    if (autoPlay && isStreaming && streamUrl) {
+      setIsPlaying(true);
+      startStream();
     }
-  }, [isPlaying, isStreaming, startStream, streamPort]);
+  }, [autoPlay, isStreaming, streamUrl, startStream]);
 
   const stopStream = () => {
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
     }
-    setStreamSrc("");
+    setStreamSrc(placeholderImage);
     setIsPlaying(false);
     setIsLoading(false);
     setError(null);
@@ -136,18 +115,20 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
   const togglePlayPause = () => {
     if (isPlaying) {
       stopStream();
-    } else {
+    } else if (isStreaming && streamUrl) {
       startStream();
+    } else {
+      setError("Stream is not available");
     }
   };
 
   const refreshStream = () => {
-    stopStream();
-    setTimeout(() => {
-      if (isStreaming && streamPort) {
+    if (isStreaming && streamUrl) {
+      stopStream();
+      setTimeout(() => {
         startStream();
-      }
-    }, 300);
+      }, 300);
+    }
   };
 
   const toggleFullscreen = async () => {
@@ -157,10 +138,31 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
       if (!isFullscreen) {
         if (containerRef.current.requestFullscreen) {
           await containerRef.current.requestFullscreen();
+          // Force landscape orientation on mobile
+          // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+          if ((window.screen.orientation as any)?.lock) {
+            try {
+              await window.screen.orientation.lock("landscape");
+            } catch (orientationError) {
+              console.log(
+                "Orientation lock not supported or failed:",
+                orientationError
+              );
+            }
+          }
         }
       } else {
         if (document.exitFullscreen) {
           await document.exitFullscreen();
+          // Unlock orientation when exiting fullscreen
+          // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+          if ((window.screen.orientation as any)?.unlock) {
+            try {
+              window.screen.orientation.unlock();
+            } catch (orientationError) {
+              console.log("Orientation unlock failed:", orientationError);
+            }
+          }
         }
       }
     } catch (err) {
@@ -168,9 +170,73 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
     }
   };
 
+  const togglePictureInPicture = async () => {
+    if (!imgRef.current || !isPipSupported) return;
+
+    try {
+      // Create a canvas to convert the img to a video element for PiP
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const video = document.createElement("video");
+
+      if (!ctx) return;
+
+      // Set canvas size to match image
+      canvas.width = imgRef.current.naturalWidth || 640;
+      canvas.height = imgRef.current.naturalHeight || 480;
+
+      // Draw the current frame
+      ctx.drawImage(imgRef.current, 0, 0);
+
+      // Convert canvas to blob and create object URL
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+
+        const videoUrl = URL.createObjectURL(blob);
+        video.src = videoUrl;
+        video.muted = true;
+        video.loop = true;
+
+        // Wait for video to load
+        video.addEventListener("loadeddata", async () => {
+          try {
+            if (document.pictureInPictureElement) {
+              await document.exitPictureInPicture();
+            } else {
+              await video.requestPictureInPicture();
+            }
+          } catch (pipError) {
+            console.error("Picture-in-Picture error:", pipError);
+          }
+        });
+
+        video.load();
+      }, "video/webm");
+    } catch (err) {
+      console.error("Picture-in-Picture error:", err);
+    }
+  };
+
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement));
+      const isCurrentlyFullscreen = Boolean(document.fullscreenElement);
+      setIsFullscreen(isCurrentlyFullscreen);
+
+      // Handle orientation when fullscreen changes
+      if (
+        !isCurrentlyFullscreen &&
+        window.screen.orientation &&
+        window.screen.orientation.unlock
+      ) {
+        try {
+          window.screen.orientation.unlock();
+        } catch (orientationError) {
+          console.log(
+            "Orientation unlock on fullscreen exit failed:",
+            orientationError
+          );
+        }
+      }
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
@@ -179,16 +245,14 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
     };
   }, []);
 
+  // Cleanup on unmount
   useEffect(() => {
-    if (autoPlay) {
-      startStream();
-    }
     return () => {
       if (loadingTimeoutRef.current) {
         clearTimeout(loadingTimeoutRef.current);
       }
     };
-  }, [autoPlay, startStream]);
+  }, []);
 
   return (
     <Stack spacing={2}>
@@ -220,7 +284,7 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
                 clearTimeout(loadingTimeoutRef.current);
               }
               // Only clear loading if it's not the placeholder image
-              if (streamSrc !== placeholderImage) {
+              if (streamSrc !== placeholderImage && streamSrc) {
                 setIsLoading(false);
                 setError(null);
               }
@@ -230,7 +294,7 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
                 clearTimeout(loadingTimeoutRef.current);
               }
               setIsLoading(false);
-              if (streamSrc !== placeholderImage) {
+              if (streamSrc !== placeholderImage && streamSrc) {
                 setError(`Failed to load MJPEG stream from: ${streamSrc}`);
                 // Fall back to placeholder image
                 setStreamSrc(placeholderImage);
@@ -239,7 +303,7 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
             }}
           />
 
-          {isLoading && (
+          {isLoading && streamSrc && streamSrc !== placeholderImage && (
             <Box
               position="absolute"
               top={0}
@@ -266,7 +330,7 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
             </Box>
           )}
 
-          {error && streamSrc === placeholderImage && (
+          {error && (
             <Box
               position="absolute"
               top={0}
@@ -287,13 +351,15 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
                   {error}
                 </Typography>
 
-                <IconButton
-                  onClick={refreshStream}
-                  color="primary"
-                  size="large"
-                >
-                  <Refresh />
-                </IconButton>
+                {isStreaming && (
+                  <IconButton
+                    onClick={refreshStream}
+                    color="primary"
+                    size="large"
+                  >
+                    <Refresh />
+                  </IconButton>
+                )}
               </Stack>
             </Box>
           )}
@@ -342,18 +408,20 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
                     </IconButton>
                   </Tooltip>
 
-                  <Tooltip title="No Audio">
-                    <IconButton size="small" disabled>
-                      <VolumeOff />
-                    </IconButton>
-                  </Tooltip>
-
                   <Typography variant="caption" color="white">
                     {title}
                   </Typography>
                 </Stack>
 
                 <Stack direction="row" spacing={1}>
+                  {isPipSupported && (
+                    <Tooltip title="Picture in Picture">
+                      <IconButton onClick={togglePictureInPicture} size="small">
+                        <PictureInPicture />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+
                   <Tooltip
                     title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                   >

@@ -22,7 +22,8 @@ const ActionBar: React.FC = () => {
   const [nightMode, setNightMode] = useState<boolean | undefined>(undefined);
   const [nightModeLoading, setNightModeLoading] = useState(false);
 
-  const { selectedCamera } = useCameraDataManagerContext();
+  const { selectedCamera, currentTransformation } =
+    useCameraDataManagerContext();
   const { error, setError } = useAutoDismissError();
   const { streamView, switchStreamView } = useOBSControl();
   const api = useApi();
@@ -89,7 +90,7 @@ const ActionBar: React.FC = () => {
             alignItems="center"
           >
             <ToggleButtonGroup
-              value={streamView}
+              value={currentTransformation}
               exclusive
               onChange={(_, newView) => {
                 if (newView) {
@@ -98,7 +99,7 @@ const ActionBar: React.FC = () => {
               }}
               size="medium"
             >
-              <ToggleButton value="mosaic">
+              <ToggleButton value="grid">
                 <GridView fontSize="inherit" />
               </ToggleButton>
               <ToggleButton value="highlight" disabled={!selectedCamera}>

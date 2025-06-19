@@ -5,12 +5,15 @@ import { useNotification } from "./useNotification";
 interface MjpegStreamStatus {
   running: boolean;
   port?: number;
+  url?: string;
+  pid?: number;
+  managed_process?: boolean;
 }
 
 export const useMjpegStream = () => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [streamPort, setStreamPort] = useState<number | null>(null);
+  const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [logs, setLogs] = useState<string>("");
 
   const api = useApi();
@@ -21,21 +24,17 @@ export const useMjpegStream = () => {
     try {
       const response = (await api.getMjpegStreamStatus()) as MjpegStreamStatus;
       setIsStreaming(response.running);
-      if (response.running && response.port) {
-        setStreamPort(response.port);
-      } else {
-        setStreamPort(null);
-      }
+      setStreamUrl(response.running ? response.url || null : null);
       return response;
     } catch (error) {
       console.error("Failed to check MJPEG stream status:", error);
       setIsStreaming(false);
-      setStreamPort(null);
+      setStreamUrl(null);
       return { running: false };
     }
   }, [api]);
 
-  // Start stream with auto-refresh trigger
+  // Start stream
   const startStream = useCallback(async () => {
     if (isLoading) return;
 
@@ -44,17 +43,15 @@ export const useMjpegStream = () => {
       const response = (await api.startMjpegStream()) as {
         success: string;
         port: number;
+        url: string;
       };
 
       // Wait for stream to be ready
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       setIsStreaming(true);
-      setStreamPort(response.port);
-      showNotification(
-        `MJPEG stream started on port ${response.port}`,
-        "success"
-      );
+      setStreamUrl(response.url);
+      showNotification(`MJPEG stream started: ${response.url}`, "success");
 
       // Verify stream is actually accessible after a short delay
       setTimeout(async () => {
@@ -65,7 +62,7 @@ export const useMjpegStream = () => {
     } catch (error) {
       console.error("Failed to start MJPEG stream:", error);
       setIsStreaming(false);
-      setStreamPort(null);
+      setStreamUrl(null);
       showNotification(
         error instanceof Error ? error.message : "Failed to start MJPEG stream",
         "error"
@@ -84,7 +81,7 @@ export const useMjpegStream = () => {
     try {
       await api.stopMjpegStream();
       setIsStreaming(false);
-      setStreamPort(null);
+      setStreamUrl(null);
       showNotification("MJPEG stream stopped successfully", "success");
       return true;
     } catch (error: unknown) {
@@ -131,7 +128,7 @@ export const useMjpegStream = () => {
   return {
     isStreaming,
     isLoading,
-    streamPort,
+    streamUrl,
     logs,
     startStream,
     stopStream,

@@ -52,7 +52,7 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
   const {
     isStreaming,
     isLoading,
-    streamPort,
+    streamUrl,
     startStream,
     stopStream,
     fetchLogs,
@@ -227,21 +227,7 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
                         <PlayArrow fontSize="inherit" />
                       )}
                     </IconButton>
-
-                    <IconButton size="small" onClick={onRefresh}>
-                      <Refresh fontSize="inherit" />
-                    </IconButton>
-
-                    <IconButton size="small" onClick={handleShowLogs}>
-                      <Assignment fontSize="inherit" />
-                    </IconButton>
                   </Stack>
-                  <Box display="flex" alignItems="center" gap={2}>
-                    <Circle
-                      htmlColor={isStreaming ? "success.main" : "error.main"}
-                      fontSize="inherit"
-                    />
-                  </Box>
                 </Stack>
               </Stack>
               <Stack

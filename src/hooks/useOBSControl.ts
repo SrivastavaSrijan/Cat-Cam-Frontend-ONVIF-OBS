@@ -76,6 +76,15 @@ export const useOBSControl = () => {
     }
   }, [api, showSuccess, showError]);
 
+  const getCurrentTransformation = useCallback(async () => {
+    try {
+      return await api.obsCurrentTransformation();
+    } catch (error) {
+      console.error("Failed to get current transformation:", error);
+      throw error;
+    }
+  }, [api]);
+
   return {
     isRefreshing,
     streamView,
@@ -84,5 +93,6 @@ export const useOBSControl = () => {
     switchScene,
     reconnect,
     refreshStreams,
+    getCurrentTransformation,
   };
 };

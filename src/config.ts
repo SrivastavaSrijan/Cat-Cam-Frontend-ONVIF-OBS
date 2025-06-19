@@ -1,9 +1,5 @@
 export const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL || "http://ssvsrijan.ddns.net:5000";
-const STREAM_URL =
-  process.env.REACT_APP_STREAM_URL ||
-  process.env.REACT_APP_API_BASE_URL?.replace(/:\d+$/, ":8080") ||
-  "http://localhost:8080";
 
 export const WEBSOCKET_URL = API_BASE_URL.replace(/:\d+$/, ":3333").replace(
   "http",
@@ -22,7 +18,7 @@ export const CAMERA_ENDPOINTS = {
   CAMERAS: "/ptz/cameras",
   CONTINUOUS_MOVE: "/ptz/continuous_move",
   STOP: "/ptz/stop",
-  MOVEMENT_STATUS: "/ptz/movement_status", // Add missing endpoint
+  MOVEMENT_STATUS: "/ptz/movement_status",
 } as const;
 
 export const OBS_ENDPOINTS = {
@@ -49,5 +45,4 @@ export const MJPEG_ENDPOINTS = {
   STOP: "/stop_mjpeg_stream",
   STATUS: "/mjpeg_stream_status",
   LOGS: "/fetch_mjpeg_logs",
-  STREAM_URL: `${STREAM_URL}`,
 } as const;
