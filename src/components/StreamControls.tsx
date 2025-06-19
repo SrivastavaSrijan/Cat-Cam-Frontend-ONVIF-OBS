@@ -6,8 +6,18 @@ import {
   Stack,
   ToggleButtonGroup,
   ToggleButton,
+  Button,
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
   Box,
   CircularProgress,
+  Typography,
+  Divider,
+  IconButton,
 } from "@mui/material";
 import {
   Videocam,
@@ -15,14 +25,20 @@ import {
   Monitor,
   Laptop,
   Close,
+  PlayArrow,
+  Stop,
+  Assignment,
+  Refresh,
+  Circle,
 } from "@mui/icons-material";
-import { useApi, useLoading } from "../hooks";
+import { useApi, useLoading, useMjpegStream } from "../hooks";
 
 interface StreamControlsProps {
   onRefresh: () => void;
 }
 
 const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
+  // Virtual Camera State
   const [virtualCameraStatus, setVirtualCameraStatus] =
     useState<string>("unknown");
   const [isVirtualCameraLoading, setIsVirtualCameraLoading] = useState(false);
@@ -31,10 +47,26 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
   const [activeProjectorMonitor, setActiveProjectorMonitor] = useState<
     string | null
   >(null);
+
+  // MJPEG Stream State
+  const {
+    isStreaming,
+    isLoading,
+    streamPort,
+    startStream,
+    stopStream,
+    fetchLogs,
+    checkStatus,
+  } = useMjpegStream();
+
+  // Dialog State
+  const [logsDialogOpen, setLogsDialogOpen] = useState(false);
+  const [currentLogs, setCurrentLogs] = useState("");
+
   const api = useApi();
   const { withLoading } = useLoading();
 
-  // Initialize virtual camera status on first use
+  // Virtual Camera Functions
   const checkVirtualCameraStatus = useCallback(async () => {
     setIsVirtualCameraLoading(true);
     try {
@@ -96,87 +128,220 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
     }
   };
 
+  // MJPEG Stream Functions
+  const handleToggleStream = async () => {
+    if (isStreaming) {
+      await stopStream();
+    } else {
+      await startStream();
+      // Auto-refresh the player after starting stream
+      setTimeout(() => onRefresh(), 1000);
+    }
+  };
+
+  const handleShowLogs = async () => {
+    const latestLogs = await fetchLogs();
+    setCurrentLogs(latestLogs);
+    setLogsDialogOpen(true);
+  };
+
+  const handleRefreshLogs = async () => {
+    const latestLogs = await fetchLogs();
+    setCurrentLogs(latestLogs);
+  };
+
+  // Effects
   useEffect(() => {
     if (virtualCameraStatus === "unknown") {
-      // Check virtual camera status on mount
       checkVirtualCameraStatus();
     }
   }, [checkVirtualCameraStatus, virtualCameraStatus]);
 
-  return (
-    <Card>
-      <CardContent>
-        <Stack
-          direction="row"
-          spacing={2}
-          alignItems="center"
-          justifyContent="space-between"
-        >
-          {/* Virtual Camera Controls */}
-          <ToggleButtonGroup exclusive size="medium">
-            <ToggleButton
-              value="start"
-              selected={virtualCameraStatus === "active"}
-              disabled={isVirtualCameraLoading}
-              onClick={() => {
-                if (virtualCameraStatus === "active") {
-                  toggleVirtualCamera("stop");
-                } else {
-                  toggleVirtualCamera("start");
-                }
-              }}
-            >
-              {isVirtualCameraLoading ? (
-                <CircularProgress size={18} />
-              ) : virtualCameraStatus === "active" ? (
-                <Videocam fontSize="inherit" />
-              ) : (
-                <VideocamOff fontSize="inherit" />
-              )}
-            </ToggleButton>
-          </ToggleButtonGroup>
+  // Refresh MJPEG status periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      checkStatus();
+    }, 5000); // Check every 5 seconds
 
-          {/* Projector Controls */}
-          <Box display="flex" alignItems="center" gap={1}>
-            <ToggleButtonGroup exclusive size="medium">
-              <ToggleButton
-                value="primary"
-                selected={activeProjectorMonitor === "primary"}
-                disabled={projectorLoading}
-                onClick={() =>
-                  handleProjectorToggle(
-                    activeProjectorMonitor === "primary" ? null : "primary"
-                  )
-                }
-              >
-                <Monitor fontSize="inherit" />
-              </ToggleButton>
-              <ToggleButton
-                value="secondary"
-                selected={activeProjectorMonitor === "secondary"}
-                disabled={projectorLoading}
-                onClick={() =>
-                  handleProjectorToggle(
-                    activeProjectorMonitor === "secondary" ? null : "secondary"
-                  )
-                }
-              >
-                <Laptop fontSize="inherit" />
-              </ToggleButton>
-              {projectorActive && (
-                <ToggleButton
-                  value="close"
-                  onClick={() => handleProjectorToggle(null)}
-                  disabled={projectorLoading}
+    return () => clearInterval(interval);
+  }, [checkStatus]);
+
+  return (
+    <>
+      <Card>
+        <CardContent>
+          <Stack spacing={2}>
+            {/* Virtual Camera & Projector Controls */}
+            <Stack
+              direction="row"
+              spacing={2}
+              alignItems="center"
+              justifyContent="space-between"
+            >
+              {/* Virtual Camera Controls */}
+              <Stack direction="row" spacing={1} alignItems="center">
+                <ToggleButtonGroup exclusive size="medium">
+                  <ToggleButton
+                    value="start"
+                    selected={virtualCameraStatus === "active"}
+                    disabled={isVirtualCameraLoading}
+                    onClick={() => {
+                      if (virtualCameraStatus === "active") {
+                        toggleVirtualCamera("stop");
+                      } else {
+                        toggleVirtualCamera("start");
+                      }
+                    }}
+                  >
+                    {isVirtualCameraLoading ? (
+                      <CircularProgress size={18} />
+                    ) : virtualCameraStatus === "active" ? (
+                      <Videocam fontSize="inherit" />
+                    ) : (
+                      <VideocamOff fontSize="inherit" />
+                    )}
+                  </ToggleButton>
+                </ToggleButtonGroup>
+                {/* MJPEG Stream Controls */}
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  alignItems="center"
+                  justifyContent="space-between"
                 >
-                  <Close fontSize="inherit" />
-                </ToggleButton>
-              )}
-            </ToggleButtonGroup>
-          </Box>
-        </Stack>
-      </CardContent>
-    </Card>
+                  {/* MJPEG Stream Status */}
+
+                  {/* Stream Controls */}
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <IconButton
+                      size="small"
+                      onClick={handleToggleStream}
+                      disabled={isLoading}
+                      color={isStreaming ? "error" : "success"}
+                    >
+                      {isLoading ? (
+                        <CircularProgress size={16} />
+                      ) : isStreaming ? (
+                        <Stop fontSize="inherit" />
+                      ) : (
+                        <PlayArrow fontSize="inherit" />
+                      )}
+                    </IconButton>
+
+                    <IconButton size="small" onClick={onRefresh}>
+                      <Refresh fontSize="inherit" />
+                    </IconButton>
+
+                    <IconButton size="small" onClick={handleShowLogs}>
+                      <Assignment fontSize="inherit" />
+                    </IconButton>
+                  </Stack>
+                  <Box display="flex" alignItems="center" gap={2}>
+                    <Circle
+                      htmlColor={isStreaming ? "success.main" : "error.main"}
+                      fontSize="inherit"
+                    />
+                  </Box>
+                </Stack>
+              </Stack>
+              <Stack
+                direction="row"
+                spacing={2}
+                alignItems="center"
+                justifyContent="space-between"
+              >
+                {/* MJPEG Stream Status */}
+              </Stack>
+
+              {/* Projector Controls */}
+              <Box>
+                <ToggleButtonGroup exclusive size="medium">
+                  <ToggleButton
+                    value="primary"
+                    selected={activeProjectorMonitor === "primary"}
+                    disabled={projectorLoading}
+                    onClick={() =>
+                      handleProjectorToggle(
+                        activeProjectorMonitor === "primary" ? null : "primary"
+                      )
+                    }
+                  >
+                    <Monitor fontSize="inherit" />
+                  </ToggleButton>
+                  <ToggleButton
+                    value="secondary"
+                    selected={activeProjectorMonitor === "secondary"}
+                    disabled={projectorLoading}
+                    onClick={() =>
+                      handleProjectorToggle(
+                        activeProjectorMonitor === "secondary"
+                          ? null
+                          : "secondary"
+                      )
+                    }
+                  >
+                    <Laptop fontSize="inherit" />
+                  </ToggleButton>
+                  {projectorActive && (
+                    <ToggleButton
+                      value="close"
+                      onClick={() => handleProjectorToggle(null)}
+                      disabled={projectorLoading}
+                    >
+                      <Close fontSize="inherit" />
+                    </ToggleButton>
+                  )}
+                </ToggleButtonGroup>
+              </Box>
+            </Stack>
+          </Stack>
+        </CardContent>
+      </Card>
+
+      {/* Logs Dialog */}
+      <Dialog
+        open={logsDialogOpen}
+        onClose={() => setLogsDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+          >
+            <Typography variant="h6">MJPEG Stream Logs</Typography>
+            <Button
+              size="small"
+              onClick={handleRefreshLogs}
+              startIcon={<Refresh />}
+            >
+              Refresh
+            </Button>
+          </Stack>
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            multiline
+            fullWidth
+            rows={20}
+            value={currentLogs || "No logs available"}
+            variant="outlined"
+            InputProps={{
+              readOnly: true,
+              style: {
+                fontFamily: "monospace",
+                fontSize: "0.875rem",
+              },
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLogsDialogOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 

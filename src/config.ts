@@ -1,5 +1,9 @@
 export const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL || "http://ssvsrijan.ddns.net:5000";
+const STREAM_URL =
+  process.env.REACT_APP_STREAM_URL ||
+  process.env.REACT_APP_API_BASE_URL?.replace(/:\d+$/, ":8080") ||
+  "http://localhost:8080";
 
 export const WEBSOCKET_URL = API_BASE_URL.replace(/:\d+$/, ":3333").replace(
   "http",
@@ -38,4 +42,12 @@ export const OBS_ENDPOINTS = {
     START: "/obs/projector/start",
     CLOSE: "/obs/projector/close",
   },
+} as const;
+
+export const MJPEG_ENDPOINTS = {
+  START: "/start_mjpeg_stream",
+  STOP: "/stop_mjpeg_stream",
+  STATUS: "/mjpeg_stream_status",
+  LOGS: "/fetch_mjpeg_logs",
+  STREAM_URL: `${STREAM_URL}`,
 } as const;

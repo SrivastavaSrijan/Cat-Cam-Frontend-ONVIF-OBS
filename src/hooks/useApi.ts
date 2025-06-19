@@ -1,6 +1,11 @@
 import { useCallback } from "react";
 import { fetchWrapper, type FetchOptions } from "../utils/fetch";
-import { API_BASE_URL, CAMERA_ENDPOINTS, OBS_ENDPOINTS } from "../config";
+import {
+  API_BASE_URL,
+  CAMERA_ENDPOINTS,
+  OBS_ENDPOINTS,
+  MJPEG_ENDPOINTS,
+} from "../config";
 
 export const useApi = () => {
   const apiCall = useCallback(
@@ -122,6 +127,7 @@ export const useApi = () => {
     () => apiCall(OBS_ENDPOINTS.VIRTUAL_CAMERA.STOP, "POST"),
     [apiCall]
   );
+
   const checkVirtualCameraStatus = useCallback(
     () => apiCall(OBS_ENDPOINTS.VIRTUAL_CAMERA.STATUS),
     [apiCall]
@@ -143,6 +149,27 @@ export const useApi = () => {
     [apiCall]
   );
 
+  // MJPEG Stream operations
+  const startMjpegStream = useCallback(
+    () => apiCall(MJPEG_ENDPOINTS.START, "POST"),
+    [apiCall]
+  );
+
+  const stopMjpegStream = useCallback(
+    () => apiCall(MJPEG_ENDPOINTS.STOP, "POST"),
+    [apiCall]
+  );
+
+  const getMjpegStreamStatus = useCallback(
+    () => apiCall(MJPEG_ENDPOINTS.STATUS),
+    [apiCall]
+  );
+
+  const getMjpegStreamLogs = useCallback(
+    () => apiCall(MJPEG_ENDPOINTS.LOGS),
+    [apiCall]
+  );
+
   return {
     apiCall,
     // Camera operations
@@ -159,11 +186,15 @@ export const useApi = () => {
     obsTransform,
     obsSwitchScene,
     obsReconnect,
-
     startVirtualCamera,
     stopVirtualCamera,
     checkVirtualCameraStatus,
     startProjector,
     closeProjector,
+    // MJPEG Stream operations
+    startMjpegStream,
+    stopMjpegStream,
+    getMjpegStreamStatus,
+    getMjpegStreamLogs,
   };
 };

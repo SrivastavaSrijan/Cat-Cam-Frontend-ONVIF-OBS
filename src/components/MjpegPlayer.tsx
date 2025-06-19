@@ -1,5 +1,5 @@
 import type React from "react";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import {
   Box,
   IconButton,
@@ -17,6 +17,8 @@ import {
   Refresh,
 } from "@mui/icons-material";
 import StreamControls from "./StreamControls";
+import { useMjpegStream } from "../hooks";
+import { MJPEG_ENDPOINTS } from "../config";
 
 interface MjpegPlayerProps {
   streamUrl: string;
@@ -46,29 +48,47 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [streamSrc, setStreamSrc] = useState<string>("");
 
-  useEffect(() => {
-    if (autoPlay) {
-      startStream();
-    }
-    return () => {
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoPlay]);
+  // Base64 placeholder image (simple camera icon)
+  const placeholderImage =
+    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDIwMCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTUwIiBmaWxsPSIjMzMzIi8+CjxwYXRoIGQ9Ik02MCA2MEgxNDBWOTBINjBWNjBaIiBzdHJva2U9IiM3NzciIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgo8Y2lyY2xlIGN4PSIxMDAiIGN5PSI3NSIgcj0iMTIiIHN0cm9rZT0iIzc3NyIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+CjxjaXJjbGUgY3g9IjEwMCIgY3k9Ijc1IiByPSI2IiBmaWxsPSIjNzc3Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTIwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNzc3IiBmb250LXNpemU9IjEyIj5ObyBTdHJlYW08L3RleHQ+Cjwvc3ZnPgo=";
 
-  const startStream = () => {
+  // Use MJPEG stream hook
+  const { isStreaming, streamPort } = useMjpegStream();
+
+  const startStream = useCallback(() => {
     // Clear any existing timeout
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
     }
 
-    // Add timestamp for cache busting
-    const separator = streamUrl.includes("?") ? "&" : "?";
-    const urlWithTimestamp = `${streamUrl}${separator}_t=${Date.now()}`;
+    // Determine which stream URL to use
+    let currentStreamUrl = streamUrl;
+    if (isStreaming && streamPort) {
+      currentStreamUrl = `${MJPEG_ENDPOINTS.STREAM_URL}`;
+    }
 
-    setStreamSrc(urlWithTimestamp);
+    // Check for unsafe ports
+    try {
+      const url = new URL(currentStreamUrl);
+      const port = Number.parseInt(url.port);
+      const unsafePorts = [
+        6000, 6001, 6002, 6003, 6004, 6005, 6006, 6007, 6008, 6009, 6010,
+      ];
+      if (unsafePorts.includes(port)) {
+        setError(
+          `Port ${port} is blocked by browsers for security reasons. Please use a safe port like 8080, 8000, or 3000.`
+        );
+        setIsLoading(false);
+        return;
+      }
+    } catch (urlError) {
+      setError(`Invalid stream URL: ${currentStreamUrl}`);
+      setIsLoading(false);
+      return;
+    }
+
+    // Don't add cache busting for MJPEG streams - it can interfere
+    setStreamSrc(currentStreamUrl);
     setIsPlaying(true);
     setError(null);
     setIsLoading(true);
@@ -76,9 +96,32 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
     // Set a timeout to handle stuck loading
     loadingTimeoutRef.current = setTimeout(() => {
       setIsLoading(false);
-      setError("Stream loading timeout - please check your connection");
-    }, 10000); // 10 second timeout
-  };
+      setError(`Stream loading timeout. URL: ${currentStreamUrl}`);
+    }, 8000);
+  }, [isStreaming, streamPort, streamUrl]);
+
+  // Auto-refresh when stream status or port changes
+  useEffect(() => {
+    if (isStreaming && streamPort) {
+      // Stream just became available, auto-start/refresh
+      setTimeout(() => {
+        setIsPlaying(true);
+        startStream();
+      }, 500);
+    } else if (!isStreaming && isPlaying) {
+      // Stream stopped, show placeholder
+      setStreamSrc(placeholderImage);
+      setError("Stream is not running");
+      setIsLoading(false);
+    }
+  }, [isStreaming, streamPort, startStream, isPlaying]);
+
+  // Only restart when stream becomes available
+  useEffect(() => {
+    if (isPlaying && isStreaming && streamPort) {
+      setTimeout(() => startStream(), 200);
+    }
+  }, [isPlaying, isStreaming, startStream, streamPort]);
 
   const stopStream = () => {
     if (loadingTimeoutRef.current) {
@@ -99,11 +142,12 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
   };
 
   const refreshStream = () => {
-    if (isPlaying) {
-      stopStream();
-      // Small delay before restarting to ensure cleanup
-      setTimeout(() => startStream(), 100);
-    }
+    stopStream();
+    setTimeout(() => {
+      if (isStreaming && streamPort) {
+        startStream();
+      }
+    }, 300);
   };
 
   const toggleFullscreen = async () => {
@@ -135,6 +179,17 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
     };
   }, []);
 
+  useEffect(() => {
+    if (autoPlay) {
+      startStream();
+    }
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
+  }, [autoPlay, startStream]);
+
   return (
     <Stack spacing={2}>
       {/* Stream Controls */}
@@ -151,7 +206,7 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
         >
           <img
             ref={imgRef}
-            src={streamSrc}
+            src={streamSrc || placeholderImage}
             alt={title}
             style={{
               width: "100%",
@@ -164,15 +219,22 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
               if (loadingTimeoutRef.current) {
                 clearTimeout(loadingTimeoutRef.current);
               }
-              setIsLoading(false);
-              setError(null);
+              // Only clear loading if it's not the placeholder image
+              if (streamSrc !== placeholderImage) {
+                setIsLoading(false);
+                setError(null);
+              }
             }}
             onError={(e) => {
               if (loadingTimeoutRef.current) {
                 clearTimeout(loadingTimeoutRef.current);
               }
               setIsLoading(false);
-              setError("Failed to load MJPEG stream - please check the URL");
+              if (streamSrc !== placeholderImage) {
+                setError(`Failed to load MJPEG stream from: ${streamSrc}`);
+                // Fall back to placeholder image
+                setStreamSrc(placeholderImage);
+              }
               console.error("Stream error:", e);
             }}
           />
@@ -189,13 +251,22 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
               justifyContent="center"
               bgcolor="rgba(0,0,0,0.5)"
             >
-              <Typography variant="body2" color="white">
-                Loading stream...
-              </Typography>
+              <Stack spacing={1} alignItems="center">
+                <Typography variant="body2" color="white">
+                  Loading stream...
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color="white"
+                  sx={{ opacity: 0.7 }}
+                >
+                  {streamSrc}
+                </Typography>
+              </Stack>
             </Box>
           )}
 
-          {error && (
+          {error && streamSrc === placeholderImage && (
             <Box
               position="absolute"
               top={0}
@@ -205,13 +276,22 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
               display="flex"
               alignItems="center"
               justifyContent="center"
-              bgcolor="rgba(0,0,0,0.8)"
+              bgcolor="rgba(0,0,0,0.6)"
             >
-              <Stack spacing={2} alignItems="center">
-                <Typography variant="body2" color="white">
+              <Stack
+                spacing={2}
+                alignItems="center"
+                sx={{ textAlign: "center", px: 2 }}
+              >
+                <Typography variant="body2" color="white" sx={{ opacity: 0.8 }}>
                   {error}
                 </Typography>
-                <IconButton onClick={refreshStream} color="primary">
+
+                <IconButton
+                  onClick={refreshStream}
+                  color="primary"
+                  size="large"
+                >
                   <Refresh />
                 </IconButton>
               </Stack>

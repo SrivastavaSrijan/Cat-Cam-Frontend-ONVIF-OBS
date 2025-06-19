@@ -6,3 +6,4 @@ export { useCameraDataManager } from "./useCameraDataManager";
 export { useOBSControl, type StreamView } from "./useOBSControl";
 export { useAutoDismissError } from "./useAutoDismissError";
 export { useCameraOverlay, type CameraMode } from "./useCameraOverlay";
+export { useMjpegStream } from "./useMjpegStream";
