@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import type React from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Button,
   Typography,
@@ -75,6 +76,7 @@ const RunnerScript: React.FC = () => {
     );
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   const pollStatus = useCallback(async () => {
     await fetchWrapper(
       `${API_BASE_URL}/poll_detection_status`,
@@ -123,6 +125,7 @@ const RunnerScript: React.FC = () => {
     };
   }, [isPolling, pollStatus]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
     fetchLogs();
   }, []);
@@ -181,12 +184,12 @@ const RunnerScript: React.FC = () => {
       <Divider />
       <Paper
         variant="outlined"
-        sx={{
+        style={{
           width: "100%",
           maxWidth: 600,
           maxHeight: 200,
           overflowY: "auto",
-          padding: 2,
+          padding: 16,
         }}
       >
         <Typography variant="h6" gutterBottom>

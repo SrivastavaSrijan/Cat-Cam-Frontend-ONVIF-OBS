@@ -56,6 +56,11 @@ const darkTheme = createTheme({
     },
   },
   components: {
+    MuiSvgIcon: {
+      defaultProps: {
+        fontSize: "inherit", // Default icon size
+      },
+    },
     MuiCard: {
       styleOverrides: {
         root: {

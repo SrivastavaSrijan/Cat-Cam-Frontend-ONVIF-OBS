@@ -3,110 +3,66 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Stack,
   Typography,
-  Paper,
   Grid,
   Card,
   CardContent,
   Chip,
-  Box,
   CircularProgress,
   Alert,
   IconButton,
   Divider,
-  useTheme,
-  useMediaQuery,
 } from "@mui/material";
-import {
-  Refresh,
-  Videocam,
-  VideocamOff,
-  Speed,
-  PanTool,
-} from "@mui/icons-material";
-import { fetchWrapper } from "../utils/fetch";
-import { API_BASE_URL, CAMERA_ENDPOINTS } from "../config";
-import { useSelectedCamera } from "../utils/useSelectedCamera";
-
-interface CameraStatus {
-  PTZPosition: {
-    PanTilt: { x: number; y: number };
-    Zoom: { x: number };
-  };
-}
-
-interface CameraInfo {
-  nickname: string;
-  host: string;
-  port: number;
-  status: "online" | "offline";
-  error?: string;
-  limits?: any;
-  current_position?: any;
-}
+import { Refresh, Videocam, VideocamOff } from "@mui/icons-material";
+import { useCameraDataManagerContext } from "../contexts/CameraDataManagerContext";
+import { useAutoDismissError } from "../hooks";
 
 const Status: React.FC = () => {
-  const [currentStatus, setCurrentStatus] = useState<CameraStatus | null>({
-    PTZPosition: {
-      PanTilt: { x: 0, y: 0 },
-      Zoom: { x: 0 },
-    },
-  });
-  const [allCameras, setAllCameras] = useState<CameraInfo[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
-  const { selectedCamera } = useSelectedCamera();
 
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const {
+    selectedCamera,
+    allCameras,
+    getCameraData,
+    loadCameraList,
+    loadCameraData,
+  } = useCameraDataManagerContext();
+  const { error, setError } = useAutoDismissError();
+
+  // Get current camera data
+  const cameraData = selectedCamera ? getCameraData(selectedCamera) : null;
+  const currentStatus = cameraData?.status;
 
   const fetchCurrentCameraStatus = useCallback(async () => {
     if (!selectedCamera) return;
 
-    setLoading(true);
-    setError(null);
-
-    await fetchWrapper(
-      `${API_BASE_URL}${CAMERA_ENDPOINTS.STATUS}?nickname=${selectedCamera}`,
-      "GET",
-      undefined,
-      (data: CameraStatus) => {
-        setCurrentStatus(data);
-        setLastUpdate(new Date());
-        setLoading(false);
-      },
-      (error) => {
-        setError(`Failed to fetch status for ${selectedCamera}`);
-        setLoading(false);
-      }
-    );
-  }, [selectedCamera]);
+    try {
+      await loadCameraData(selectedCamera);
+      setLastUpdate(new Date());
+      setError(null);
+    } catch (error) {
+      setError(`Failed to fetch status for ${selectedCamera}`);
+    }
+  }, [selectedCamera, loadCameraData, setError]);
 
   const fetchAllCameras = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    try {
+      await loadCameraList();
+      setLastUpdate(new Date());
+      setError(null);
+    } catch (error) {
+      setError("Failed to fetch camera information");
+    }
+  }, [loadCameraList, setError]);
 
-    await fetchWrapper(
-      `${API_BASE_URL}${CAMERA_ENDPOINTS.CAMERAS}`,
-      "GET",
-      undefined,
-      (data: { cameras: CameraInfo[] }) => {
-        setAllCameras(data.cameras || []);
-        setLastUpdate(new Date());
-        setLoading(false);
-      },
-      (error) => {
-        setError("Failed to fetch camera information");
-        setLoading(false);
-      }
-    );
-  }, []);
+  const refreshData = useCallback(async () => {
+    await Promise.all([fetchCurrentCameraStatus(), fetchAllCameras()]);
+  }, [fetchCurrentCameraStatus, fetchAllCameras]);
 
   const formatPosition = (value: number) => {
-    return value.toFixed(3);
+    return value?.toFixed(3);
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string): "success" | "error" | "default" => {
     switch (status) {
       case "online":
         return "success";
@@ -117,161 +73,130 @@ const Status: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchCurrentCameraStatus();
-    fetchAllCameras();
-  }, [fetchCurrentCameraStatus, fetchAllCameras]);
-
   return (
     <Stack spacing={3}>
-      {/* Header */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography variant="h5">Camera Status</Typography>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          {loading && <CircularProgress size={20} />}
-          <IconButton
-            onClick={() => {
-              fetchCurrentCameraStatus();
-              fetchAllCameras();
-            }}
-            disabled={loading}
-          >
-            <Refresh />
-          </IconButton>
-        </Stack>
-      </Stack>
-
       {error && (
         <Alert severity="error" onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
-      {/* Current Camera Detailed Status */}
-      {currentStatus && (
-        <Paper elevation={2} sx={{ p: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            Current Camera: {selectedCamera}
+      <Card>
+        <CardContent>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+          >
+            <Typography variant="h6">System Status</Typography>
+            <IconButton onClick={refreshData} disabled={cameraData?.isLoading}>
+              {cameraData?.isLoading ? (
+                <CircularProgress size={20} />
+              ) : (
+                <Refresh />
+              )}
+            </IconButton>
+          </Stack>
+
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            Last updated: {lastUpdate.toLocaleTimeString()}
           </Typography>
+        </CardContent>
+      </Card>
 
-          <Grid container spacing={2}>
-            {/* PTZ Position */}
-            <Grid item xs={12} md={6}>
-              <Card variant="outlined">
-                <CardContent>
-                  <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-                    <PanTool fontSize="small" />
-                    <Typography variant="subtitle1">PTZ Position</Typography>
-                  </Stack>
-
-                  <Stack spacing={1}>
-                    <Stack direction="row" justifyContent="space-between">
-                      <Typography variant="body2">Pan (X):</Typography>
-                      <Typography variant="body2" fontFamily="monospace">
-                        {formatPosition(currentStatus.PTZPosition.PanTilt.x)}
-                      </Typography>
-                    </Stack>
-                    <Stack direction="row" justifyContent="space-between">
-                      <Typography variant="body2">Tilt (Y):</Typography>
-                      <Typography variant="body2" fontFamily="monospace">
-                        {formatPosition(currentStatus.PTZPosition.PanTilt.y)}
-                      </Typography>
-                    </Stack>
-                  </Stack>
-                </CardContent>
-              </Card>
+      {/* Current Camera Status */}
+      {selectedCamera && currentStatus && (
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              {selectedCamera} Position
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <Stack spacing={1}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Pan
+                  </Typography>
+                  <Typography variant="h6">
+                    {formatPosition(currentStatus.PTZPosition.PanTilt?.x)}
+                  </Typography>
+                </Stack>
+              </Grid>
+              <Grid item xs={6}>
+                <Stack spacing={1}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Tilt
+                  </Typography>
+                  <Typography variant="h6">
+                    {formatPosition(currentStatus.PTZPosition.PanTilt.y)}
+                  </Typography>
+                </Stack>
+              </Grid>
+              <Grid item xs={12}>
+                <Divider />
+              </Grid>
+              <Grid item xs={12}>
+                <Stack spacing={1}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Zoom
+                  </Typography>
+                  <Typography variant="h6">
+                    {formatPosition(currentStatus.PTZPosition.Zoom.x)}
+                  </Typography>
+                </Stack>
+              </Grid>
             </Grid>
-
-            {/* Movement Limits */}
-            <Grid item xs={12} md={6}>
-              <Card variant="outlined">
-                <CardContent>
-                  <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-                    <Speed fontSize="small" />
-                    <Typography variant="subtitle1">Movement Limits</Typography>
-                  </Stack>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        </Paper>
+          </CardContent>
+        </Card>
       )}
 
-      <Divider />
-
-      {/* All Cameras Overview */}
-      <Box>
-        <Typography variant="h6" gutterBottom>
-          All Cameras Overview
-        </Typography>
-
-        <Grid container spacing={2}>
-          {allCameras.map((camera) => (
-            <Grid item xs={12} sm={6} md={4} key={camera.nickname}>
-              <Card
-                variant="outlined"
-                sx={{
-                  border: camera.nickname === selectedCamera ? 2 : 1,
-                  borderColor:
-                    camera.nickname === selectedCamera
-                      ? "primary.main"
-                      : "divider",
-                }}
-              >
+      {/* All Cameras Status */}
+      <Card>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            All Cameras ({allCameras.length})
+          </Typography>
+          <Stack spacing={2}>
+            {allCameras.map((camera) => (
+              <Card key={camera.nickname} variant="outlined">
                 <CardContent>
-                  <Stack spacing={2}>
-                    <Stack
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
-                    >
-                      <Typography variant="subtitle1" noWrap>
-                        {camera.nickname}
-                      </Typography>
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                  >
+                    <Stack direction="row" alignItems="center" spacing={2}>
                       {camera.status === "online" ? (
-                        <Videocam color="success" fontSize="small" />
+                        <Videocam color="success" />
                       ) : (
-                        <VideocamOff color="error" fontSize="small" />
+                        <VideocamOff color="error" />
                       )}
-                    </Stack>
-
-                    <Stack spacing={1}>
-                      <Stack direction="row" justifyContent="space-between">
-                        <Typography variant="body2">Status:</Typography>
-                        <Chip
-                          size="small"
-                          label={camera.status}
-                          color={getStatusColor(camera.status) as any}
-                          variant="outlined"
-                        />
-                      </Stack>
-
-                      <Stack direction="row" justifyContent="space-between">
-                        <Typography variant="body2">Host:</Typography>
-                        <Typography variant="body2" fontFamily="monospace">
+                      <Stack>
+                        <Typography variant="subtitle1">
+                          {camera.nickname}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
                           {camera.host}:{camera.port}
                         </Typography>
                       </Stack>
-
-                      {camera.error && (
-                        <Typography variant="caption" color="error">
-                          {camera.error}
-                        </Typography>
-                      )}
                     </Stack>
+                    <Chip
+                      label={camera.status}
+                      color={getStatusColor(camera.status)}
+                      size="small"
+                    />
                   </Stack>
+                  {camera.error && (
+                    <Typography variant="body2" color="error">
+                      {camera.error}
+                    </Typography>
+                  )}
                 </CardContent>
               </Card>
-            </Grid>
-          ))}
-        </Grid>
-      </Box>
-
-      {/* Refresh Info */}
-      <Typography variant="caption" color="text.secondary" textAlign="center">
-        Status refreshes automatically when switching cameras. Click refresh for
-        latest information.
-      </Typography>
+            ))}
+          </Stack>
+        </CardContent>
+      </Card>
     </Stack>
   );
 };

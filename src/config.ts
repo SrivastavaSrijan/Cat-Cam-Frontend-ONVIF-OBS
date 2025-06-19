@@ -28,4 +28,14 @@ export const OBS_ENDPOINTS = {
   TRANSFORM: "/obs/transform",
   CURRENT_TRANSFORMATION: "/obs/current_transformation",
   RECONNECT: "/obs/reconnect",
+  MJPEG_STREAM: "/mjpeg",
+  VIRTUAL_CAMERA: {
+    START: "/obs/virtual_camera/start",
+    STOP: "/obs/virtual_camera/stop",
+    STATUS: "/obs/virtual_camera/status",
+  },
+  PROJECTOR: {
+    START: "/obs/projector/start",
+    CLOSE: "/obs/projector/close",
+  },
 } as const;

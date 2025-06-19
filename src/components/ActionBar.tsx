@@ -1,5 +1,5 @@
 import type React from "react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -7,233 +7,129 @@ import {
   ToggleButtonGroup,
   ToggleButton,
   Switch,
-  Box,
   Alert,
-  CircularProgress,
+  FormControlLabel,
 } from "@mui/material";
 import {
   GridView,
   CenterFocusStrong,
   NightlightRound,
 } from "@mui/icons-material";
-import { fetchWrapper } from "../utils/fetch";
-import { API_BASE_URL, CAMERA_ENDPOINTS, OBS_ENDPOINTS } from "../config";
-import { useSelectedCamera } from "../utils/useSelectedCamera";
+import { useCameraDataManagerContext } from "../contexts/CameraDataManagerContext";
+import { useApi, useOBSControl, useAutoDismissError } from "../hooks";
 
 const ActionBar: React.FC = () => {
-  const [streamView, setStreamView] = useState<"mosaic" | "highlight">(
-    "mosaic"
-  );
-  const [nightMode, setNightMode] = useState(false);
+  const [nightMode, setNightMode] = useState<boolean | undefined>(undefined);
   const [nightModeLoading, setNightModeLoading] = useState(false);
-  const [obsError, setObsError] = useState<string | null>(null);
-  const { selectedCamera } = useSelectedCamera();
+
+  const { selectedCamera } = useCameraDataManagerContext();
+  const { error, setError } = useAutoDismissError();
+  const { streamView, switchStreamView } = useOBSControl();
+  const api = useApi();
 
   // Check night mode status
   const checkNightMode = useCallback(async () => {
     if (!selectedCamera) return;
 
     setNightModeLoading(true);
-    await fetchWrapper(
-      `${API_BASE_URL}${CAMERA_ENDPOINTS.IMAGING}?nickname=${selectedCamera}`,
-      "GET",
-      undefined,
-      (data) => {
-        const actualNightMode = data?.imaging?.brightness === 0;
-        setNightMode(actualNightMode);
-        setNightModeLoading(false);
-      },
-      (error) => {
-        console.error("Failed to check night mode status:", error);
-        setNightModeLoading(false);
-      }
-    );
-  }, [selectedCamera]);
-
-  // Handle stream view change using OBS transform endpoint
-  const handleStreamViewChange = async (view: "mosaic" | "highlight") => {
-    if (view === streamView) return;
-
-    if (view === "highlight" && selectedCamera) {
-      await fetchWrapper(
-        `${API_BASE_URL}${OBS_ENDPOINTS.TRANSFORM}`,
-        "POST",
-        {
-          type: "highlight",
-          active_source: selectedCamera,
-        },
-        () => {
-          setStreamView("highlight");
-          setObsError(null);
-        },
-        (error) => {
-          console.error("Failed to highlight camera:", error);
-          setObsError(
-            "OBS connection lost. Use the floating action button to reconnect."
-          );
-        }
-      );
-    } else if (view === "mosaic") {
-      await fetchWrapper(
-        `${API_BASE_URL}${OBS_ENDPOINTS.TRANSFORM}`,
-        "POST",
-        {
-          type: "grid",
-        },
-        () => {
-          setStreamView("mosaic");
-          setObsError(null);
-        },
-        (error) => {
-          console.error("Failed to switch to mosaic:", error);
-          setObsError(
-            "OBS connection lost. Use the floating action button to reconnect."
-          );
-        }
-      );
+    try {
+      const data = await api.getCameraImaging(selectedCamera);
+      const actualNightMode =
+        (data as { imaging?: { brightness?: number } })?.imaging?.brightness ===
+        0;
+      setNightMode(actualNightMode);
+    } catch (error) {
+      console.error("Failed to check night mode status:", error);
+    } finally {
+      setNightModeLoading(false);
     }
-  };
+  }, [selectedCamera, api]);
 
-  // Switch to highlight view when camera changes
-  const switchToHighlight = useCallback(async () => {
-    if (!selectedCamera) return;
-
-    await fetchWrapper(
-      `${API_BASE_URL}${OBS_ENDPOINTS.TRANSFORM}`,
-      "POST",
-      {
-        type: "highlight",
-        active_source: selectedCamera,
-      },
-      () => {
-        setStreamView("highlight");
-        setObsError(null);
-      },
-      (error) => {
-        console.error("Failed to highlight camera:", error);
-        setObsError(
-          "OBS connection lost. Use the floating action button to reconnect."
-        );
-      }
-    );
-  }, [selectedCamera]);
-
-  // Toggle night mode with validation
-  const handleNightModeChange = async () => {
+  // Handle night mode toggle
+  const handleNightModeToggle = useCallback(async () => {
     if (!selectedCamera || nightModeLoading) return;
 
+    const newNightMode = !nightMode;
     setNightModeLoading(true);
-    const newMode = !nightMode;
 
-    await fetchWrapper(
-      `${API_BASE_URL}${CAMERA_ENDPOINTS.NIGHT_MODE}?nickname=${selectedCamera}`,
-      "POST",
-      { enable: newMode },
-      async () => {
-        // Validate the change by checking imaging settings
-        await fetchWrapper(
-          `${API_BASE_URL}${CAMERA_ENDPOINTS.IMAGING}?nickname=${selectedCamera}`,
-          "GET",
-          undefined,
-          (data) => {
-            const actualNightMode = data?.imaging?.brightness === 0;
-            setNightMode(actualNightMode);
-            setNightModeLoading(false);
-
-            if (actualNightMode !== newMode) {
-              console.warn("Night mode change may not have taken effect");
-            }
-          },
-          (error) => {
-            console.error("Failed to validate night mode change:", error);
-            setNightMode(newMode);
-            setNightModeLoading(false);
-          }
-        );
-      },
-      (error) => {
-        console.error("Failed to toggle night mode:", error);
-        setNightModeLoading(false);
-      }
-    );
-  };
-
-  // Auto-dismiss OBS error after 15 seconds
-  useEffect(() => {
-    if (obsError) {
-      const timer = setTimeout(() => {
-        setObsError(null);
-      }, 15000);
-      return () => clearTimeout(timer);
+    try {
+      await api.toggleNightMode(selectedCamera, newNightMode);
+      setNightMode(newNightMode);
+      setError(null);
+    } catch (error) {
+      console.error("Failed to toggle night mode:", error);
+      setError("Failed to toggle night mode");
+    } finally {
+      setNightModeLoading(false);
     }
-  }, [obsError]);
+  }, [selectedCamera, nightMode, nightModeLoading, api, setError]);
 
-  // Load state when camera changes
+  // Check night mode when camera changes
   useEffect(() => {
-    if (selectedCamera) {
+    if (selectedCamera && nightMode === undefined) {
       checkNightMode();
-      switchToHighlight();
     }
-  }, [selectedCamera, checkNightMode, switchToHighlight]);
+  }, [selectedCamera, checkNightMode, nightMode]);
 
   return (
-    <>
-      {obsError && (
-        <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
-          {obsError}
-        </Alert>
-      )}
+    <Card>
+      <CardContent>
+        <Stack spacing={2}>
+          {error && (
+            <Alert severity="error" onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
 
-      <Card elevation={0} sx={{ borderRadius: 3 }}>
-        <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
+          {/* Stream View Toggle */}
           <Stack
+            spacing={1}
             direction="row"
             justifyContent="space-between"
             alignItems="center"
           >
-            {/* View Mode Toggle */}
             <ToggleButtonGroup
-              exclusive
               value={streamView}
-              color="primary"
-              onChange={(_, value) => value && handleStreamViewChange(value)}
+              exclusive
+              onChange={(_, newView) => {
+                if (newView) {
+                  switchStreamView(newView, selectedCamera || undefined);
+                }
+              }}
+              size="medium"
             >
               <ToggleButton value="mosaic">
-                <GridView sx={{ fontSize: 18 }} />
+                <GridView fontSize="inherit" />
               </ToggleButton>
-              <ToggleButton value="highlight">
-                <CenterFocusStrong sx={{ fontSize: 18 }} />
+              <ToggleButton value="highlight" disabled={!selectedCamera}>
+                <CenterFocusStrong fontSize="inherit" />
               </ToggleButton>
             </ToggleButtonGroup>
 
-            {/* Night Mode Switch */}
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <NightlightRound
-                sx={{
-                  fontSize: 18,
-                  color: nightMode ? "warning.main" : "text.secondary",
-                  opacity: nightModeLoading ? 0.5 : 1,
-                }}
-              />
-              <Switch
-                checked={nightMode}
-                onChange={handleNightModeChange}
-                disabled={nightModeLoading}
-                size="small"
-                sx={{
-                  "& .MuiSwitch-switchBase.Mui-checked": {
-                    color: "warning.main",
-                  },
-                  "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                    backgroundColor: "warning.main",
-                  },
-                }}
-              />
-            </Box>
+            {/* Night Mode Toggle */}
+            {selectedCamera && (
+              <Stack spacing={1}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={nightMode}
+                      onChange={handleNightModeToggle}
+                      disabled={nightModeLoading}
+                      size="small"
+                    />
+                  }
+                  label={
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <NightlightRound fontSize="inherit" />
+                    </Stack>
+                  }
+                />
+              </Stack>
+            )}
           </Stack>
-        </CardContent>
-      </Card>
-    </>
+        </Stack>
+      </CardContent>
+    </Card>
   );
 };
 

@@ -7,9 +7,11 @@ export interface FetchOptions {
 export const fetchWrapper = async (
   url: string,
   method: "GET" | "POST" = "GET",
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   body?: any,
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   successCallback?: (response: any) => void,
-  errorCallback?: (error: any) => void,
+  errorCallback?: (error: unknown) => void,
   options: FetchOptions = {}
 ): Promise<void> => {
   const { timeout = 10000, retries = 1, retryDelay = 1000 } = options;
@@ -44,7 +46,7 @@ export const fetchWrapper = async (
         "Success:",
         result.message || result.success || "Operation successful!"
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(timeoutId);
 
       if (attempt < retries) {
@@ -55,7 +57,7 @@ export const fetchWrapper = async (
         return executeRequest(attempt + 1);
       }
 
-      console.error("Fetch error:", error.message);
+      console.error("Fetch error:", (error as Error).message);
       if (errorCallback) {
         errorCallback(error);
       }

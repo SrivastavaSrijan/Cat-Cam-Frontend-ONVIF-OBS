@@ -1,14 +1,12 @@
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   CssBaseline,
   Container,
   Grid,
-  Paper,
   Box,
   Typography,
   Stack,
-  Divider,
   useMediaQuery,
   Fab,
   Menu,
@@ -16,34 +14,40 @@ import {
   ListItemIcon,
   ListItemText,
   CircularProgress,
-  Alert,
-  Snackbar,
 } from "@mui/material";
-import { MoreVert, Refresh, Cable, Restore } from "@mui/icons-material";
+import { MoreVert, Cable, Restore, Gesture } from "@mui/icons-material";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { useSwipeable } from "react-swipeable";
 import darkTheme from "./theme";
-import Navbar from "./components/Navbar";
-import CameraSelector from "./components/CameraSelector";
-import ActionBar from "./components/ActionBar";
-import CameraControl from "./components/CameraControl";
-import Status from "./components/Status";
-import { SelectedCameraProvider } from "./utils/useSelectedCamera";
-import RunnerScript from "./components/RunnerScript";
-import { TwitchPlayer } from "react-twitch-embed";
+import {
+  Navbar,
+  CameraSelector,
+  ActionBar,
+  CameraControl,
+  Status,
+  CameraOverlay,
+  RunnerScript,
+  MjpegPlayer,
+} from "./components";
+import { CameraDataManagerProvider } from "./contexts/CameraDataManagerContext";
+import { NotificationProvider } from "./contexts";
+import { useOBSControl } from "./hooks";
 import { API_BASE_URL, OBS_ENDPOINTS } from "./config";
-import { fetchWrapper } from "./utils/fetch";
+import MovementControls from "./components/MovementControls";
 
 const App: React.FC = () => {
   const [value, setValue] = useState(1);
-  const [isLiveView, setIsLiveView] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [reconnecting, setReconnecting] = useState(false);
-  const [notification, setNotification] = useState<{
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
+  const [cameraOverlayOpen, setCameraOverlayOpen] = useState(false);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
+
+  const {
+    refreshStreams,
+    reconnect,
+    loading: obsLoading,
+    isRefreshing,
+  } = useOBSControl();
 
   // Create simple theme
   const theme = createTheme({
@@ -70,17 +74,11 @@ const App: React.FC = () => {
     },
   });
 
-  useEffect(() => {
-    setIsLiveView(
-      !!new URLSearchParams(window.location.search).get("liveview")
-    );
-  }, []);
-
   const handleChange = (event: React.SyntheticEvent, newValue: number) => {
     setValue(newValue);
   };
 
-  // Handle floating action button menu
+  // Handle floating action button menu (short press)
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -89,83 +87,37 @@ const App: React.FC = () => {
     setAnchorEl(null);
   };
 
-  // Reconnect to OBS
-  const reconnectToOBS = async () => {
-    setReconnecting(true);
-    setAnchorEl(null);
-
-    await fetchWrapper(
-      `${API_BASE_URL}${OBS_ENDPOINTS.RECONNECT}`,
-      "POST",
-      undefined,
-      () => {
-        setReconnecting(false);
-        setNotification({
-          message: "Successfully reconnected to OBS",
-          type: "success",
-        });
-      },
-      (error) => {
-        console.error("Failed to reconnect to OBS:", error);
-        setReconnecting(false);
-        setNotification({
-          message: "Failed to reconnect to OBS",
-          type: "error",
-        });
+  // Cleanup timer on unmount
+  useEffect(() => {
+    const timer = longPressTimerRef.current;
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
       }
-    );
-  };
+    };
+  }, []);
 
-  // Refresh RTSP streams with "Please Wait" toggle
-  const refreshStreams = async () => {
-    setRefreshing(true);
-    setAnchorEl(null);
+  // Tab navigation order
+  const tabOrder = [1, 2, 3];
 
-    try {
-      // Switch to "Please Wait" scene
-      await fetchWrapper(
-        `${API_BASE_URL}${OBS_ENDPOINTS.SWITCH_SCENE}`,
-        "POST",
-        { scene_name: "Please Wait" },
-        () => {
-          console.log("Switched to Please Wait scene");
-        },
-        (error) => {
-          console.error("Failed to switch to Please Wait:", error);
-          throw new Error("Failed to switch to Please Wait scene");
-        }
-      );
-
-      // Wait 5 seconds
-      setTimeout(async () => {
-        // Switch back to Mosaic
-        await fetchWrapper(
-          `${API_BASE_URL}${OBS_ENDPOINTS.SWITCH_SCENE}`,
-          "POST",
-          { scene_name: "Mosaic" },
-          () => {
-            console.log("Switched back to Mosaic scene");
-            setRefreshing(false);
-            setNotification({
-              message: "RTSP streams refreshed successfully",
-              type: "success",
-            });
-          },
-          (error) => {
-            console.error("Failed to switch back to Mosaic:", error);
-            setRefreshing(false);
-            setNotification({
-              message: "Failed to complete stream refresh",
-              type: "error",
-            });
-          }
-        );
-      }, 5000);
-    } catch (error) {
-      setRefreshing(false);
-      setNotification({ message: "Failed to refresh streams", type: "error" });
-    }
-  };
+  // Swipe handlers
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: () => {
+      const currentIndex = tabOrder.indexOf(value);
+      const nextIndex = (currentIndex + 1) % tabOrder.length;
+      setValue(tabOrder[nextIndex]);
+    },
+    onSwipedRight: () => {
+      const currentIndex = tabOrder.indexOf(value);
+      const prevIndex =
+        currentIndex === 0 ? tabOrder.length - 1 : currentIndex - 1;
+      setValue(tabOrder[prevIndex]);
+    },
+    trackMouse: true,
+    trackTouch: true,
+    preventScrollOnSwipe: true,
+    delta: 50, // Minimum swipe distance
+  });
 
   const renderTabContent = () => {
     switch (value) {
@@ -174,9 +126,17 @@ const App: React.FC = () => {
           <Grid container spacing={3}>
             <Grid item xs={12} md={6} lg={4}>
               <Stack spacing={3}>
-                <ActionBar />
                 <CameraSelector />
                 <CameraControl />
+                <MjpegPlayer
+                  streamUrl={`${API_BASE_URL}${OBS_ENDPOINTS.MJPEG_STREAM}`}
+                  title="SSV Cam"
+                  height={200}
+                  autoPlay={true}
+                  controls={true}
+                />
+                <ActionBar />
+                <MovementControls />
               </Stack>
             </Grid>
           </Grid>
@@ -219,111 +179,98 @@ const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <SelectedCameraProvider>
-        <div className="App">
-          <Navbar value={value} handleChange={handleChange} />
+      <NotificationProvider>
+        <CameraDataManagerProvider>
+          <div className="App">
+            <Navbar value={value} handleChange={handleChange} />
 
-          <Container
-            maxWidth="xl"
-            sx={{
-              py: 4,
-              mt: 0,
-              minHeight: "calc(100vh - 120px)",
-              backgroundColor: "background.default",
-            }}
-          >
-            {!isLiveView ? null : (
-              <>
-                <Paper elevation={1} sx={{ mb: 4, p: 2, borderRadius: 2 }}>
-                  <TwitchPlayer
-                    width="95vw"
-                    channel="srijansrivastava"
-                    autoplay
-                    parent={API_BASE_URL.replace(/:\d+$/, "").replace(
-                      "http://",
-                      ""
-                    )}
-                    muted
-                  />
-                </Paper>
-                <Divider sx={{ mb: 4 }} />
-              </>
-            )}
+            <Container maxWidth="xl" {...swipeHandlers}>
+              <Box py={3}>{renderTabContent()}</Box>
+            </Container>
 
-            {renderTabContent()}
-          </Container>
-
-          {/* Floating Action Button */}
-          <Fab
-            color="primary"
-            size="small"
-            sx={{
-              position: "fixed",
-              bottom: 24,
-              right: 24,
-              zIndex: 1000,
-            }}
-            onClick={handleMenuOpen}
-            disabled={refreshing || reconnecting}
-          >
-            {refreshing || reconnecting ? (
-              <CircularProgress size={24} color="inherit" />
-            ) : (
-              <MoreVert />
-            )}
-          </Fab>
-
-          {/* Action Menu */}
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
-            anchorOrigin={{
-              vertical: "top",
-              horizontal: "left",
-            }}
-            transformOrigin={{
-              vertical: "bottom",
-              horizontal: "right",
-            }}
-          >
-            <MenuItem
-              onClick={refreshStreams}
-              disabled={refreshing || reconnecting}
+            {/* Floating Action Buttons */}
+            <Fab
+              color="primary"
+              size="small"
+              onClick={() => setCameraOverlayOpen(true)}
+              disabled={obsLoading}
+              sx={{
+                position: "fixed",
+                bottom: 16,
+                right: 16,
+                zIndex: 1000,
+              }}
             >
-              <ListItemIcon>
-                <Restore fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="Refresh RTSP Streams" />
-            </MenuItem>
-            <MenuItem
-              onClick={reconnectToOBS}
-              disabled={refreshing || reconnecting}
-            >
-              <ListItemIcon>
-                <Cable fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="Reconnect to OBS" />
-            </MenuItem>
-          </Menu>
+              <Gesture />
+            </Fab>
 
-          {/* Notification Snackbar */}
-          <Snackbar
-            open={Boolean(notification)}
-            autoHideDuration={4000}
-            onClose={() => setNotification(null)}
-            anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-          >
-            <Alert
-              severity={notification?.type || "info"}
-              onClose={() => setNotification(null)}
-              sx={{ width: "100%" }}
+            <Fab
+              color="primary"
+              size="small"
+              onClick={handleMenuOpen}
+              disabled={obsLoading || isRefreshing}
+              sx={{
+                position: "fixed",
+                bottom: 16,
+                right: 72,
+                zIndex: 1000,
+              }}
             >
-              {notification?.message}
-            </Alert>
-          </Snackbar>
-        </div>
-      </SelectedCameraProvider>
+              {obsLoading || isRefreshing ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                <MoreVert />
+              )}
+            </Fab>
+
+            {/* Action Menu */}
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleMenuClose}
+              anchorOrigin={{
+                vertical: "top",
+                horizontal: "left",
+              }}
+              transformOrigin={{
+                vertical: "bottom",
+                horizontal: "right",
+              }}
+            >
+              <MenuItem
+                onClick={() => {
+                  refreshStreams();
+                  handleMenuClose();
+                }}
+                disabled={obsLoading || isRefreshing}
+              >
+                <ListItemIcon>
+                  <Restore fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="Refresh RTSP Streams" />
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  reconnect();
+                  handleMenuClose();
+                }}
+                disabled={obsLoading}
+              >
+                <ListItemIcon>
+                  <Cable fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary="Reconnect to OBS" />
+              </MenuItem>
+            </Menu>
+
+            {/* Camera Control Overlay */}
+            <CameraOverlay
+              open={cameraOverlayOpen}
+              onClose={() => setCameraOverlayOpen(false)}
+            />
+          </div>
+        </CameraDataManagerProvider>
+      </NotificationProvider>
     </ThemeProvider>
   );
 };
