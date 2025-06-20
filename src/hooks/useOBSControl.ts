@@ -3,10 +3,10 @@ import { useApi } from "./useApi";
 import { useNotification } from "./useNotification";
 import { useLoading } from "./useLoading";
 
-export type StreamView = "mosaic" | "highlight";
+export type StreamView = "grid" | "highlight";
 
 export const useOBSControl = () => {
-  const [streamView, setStreamView] = useState<StreamView>("mosaic");
+  const [streamView, setStreamView] = useState<StreamView>("grid");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { loading, withLoading } = useLoading();
   const { showError, showSuccess } = useNotification();
@@ -19,9 +19,9 @@ export const useOBSControl = () => {
           await withLoading(() => api.obsTransform("highlight", activeCamera));
           setStreamView("highlight");
           showSuccess(`Switched to highlight view for ${activeCamera}`);
-        } else if (view === "mosaic") {
+        } else if (view === "grid") {
           await withLoading(() => api.obsTransform("grid"));
-          setStreamView("mosaic");
+          setStreamView("grid");
           showSuccess("Switched to mosaic view");
         }
       } catch (error) {
@@ -63,7 +63,7 @@ export const useOBSControl = () => {
       // Wait 5 seconds then switch back to Mosaic
       setTimeout(async () => {
         try {
-          await api.obsSwitchScene("Mosaic");
+          await api.obsSwitchScene("grid");
           showSuccess("RTSP streams refreshed successfully");
         } catch (error) {
           showError("Failed to complete stream refresh");
@@ -76,9 +76,11 @@ export const useOBSControl = () => {
     }
   }, [api, showSuccess, showError]);
 
-  const getCurrentTransformation = useCallback(async () => {
+  const getStreamView = useCallback(async () => {
     try {
-      return await api.obsCurrentTransformation();
+      const currentStreamView = await api.obsStreamView();
+      setStreamView(currentStreamView.layout_mode);
+      return currentStreamView;
     } catch (error) {
       console.error("Failed to get current transformation:", error);
       throw error;
@@ -93,6 +95,6 @@ export const useOBSControl = () => {
     switchScene,
     reconnect,
     refreshStreams,
-    getCurrentTransformation,
+    getStreamView,
   };
 };

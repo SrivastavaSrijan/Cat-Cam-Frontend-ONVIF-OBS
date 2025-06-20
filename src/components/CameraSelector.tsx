@@ -7,13 +7,8 @@ import {
   FormControl,
   Card,
   CardContent,
-  Chip,
 } from "@mui/material";
-import {
-  Videocam,
-  VideocamOff,
-  Circle as CircleIcon,
-} from "@mui/icons-material";
+import { Circle as CircleIcon } from "@mui/icons-material";
 import { useCameraDataManagerContext } from "../contexts/CameraDataManagerContext";
 
 const CameraSelector: React.FC = () => {
@@ -38,14 +33,6 @@ const CameraSelector: React.FC = () => {
     if (cameraData?.status === "online") {
       selectCamera(camera);
     }
-  };
-
-  const getCameraIcon = (status: string) => {
-    return status === "online" ? (
-      <Videocam color="success" />
-    ) : (
-      <VideocamOff color="error" />
-    );
   };
 
   return (
@@ -78,11 +65,6 @@ const CameraSelector: React.FC = () => {
               onChange={handleSelectChange}
               displayEmpty
             >
-              <MenuItem value="" disabled>
-                <Typography color="text.secondary">
-                  Choose a camera...
-                </Typography>
-              </MenuItem>
               {allCameras.map((camera) => (
                 <MenuItem
                   key={camera.nickname}
@@ -90,7 +72,6 @@ const CameraSelector: React.FC = () => {
                   disabled={camera.status === "offline"}
                 >
                   <Stack direction="row" alignItems="center" spacing={2}>
-                    {getCameraIcon(camera.status)}
                     <Typography fontSize="small">{camera.nickname}</Typography>
                   </Stack>
                 </MenuItem>

@@ -107,7 +107,7 @@ export const useApi = () => {
     [apiCall]
   );
 
-  const obsCurrentTransformation = useCallback(
+  const obsStreamView = useCallback(
     () =>
       apiCall<{
         layout_mode: "grid" | "highlight";
@@ -192,7 +192,7 @@ export const useApi = () => {
     stopMove,
     moveCamera,
     // OBS operations
-    obsCurrentTransformation,
+    obsStreamView,
     obsTransform,
     obsSwitchScene,
     obsReconnect,

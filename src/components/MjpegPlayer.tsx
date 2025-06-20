@@ -28,7 +28,7 @@ interface MjpegPlayerProps {
 }
 // Base64 placeholder image (simple camera icon)
 const placeholderImage =
-  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgdmlld0JveD0iMCAwIDIwMCAxNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTUwIiBmaWxsPSIjMzMzIi8+CjxwYXRoIGQ9Ik02MCA2MEgxNDBWOTBINjBWNjBaIiBzdHJva2U9IiM3NzciIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgo8Y2lyY2xlIGN4PSIxMDAiIGN5PSI3NSIgcj0iMTIiIHN0cm9rZT0iIzc3NyIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+CjxjaXJjbGUgY3g9IjEwMCIgY3k9Ijc1IiByPSI2IiBmaWxsPSIjNzc3Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTIwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNzc3IiBmb250LXNpemU9IjEyIj5ObyBTdHJlYW08L3RleHQ+Cjwvc3ZnPgo=";
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAIAQMAAAD+wSzIAAAABlBMVEX///+/v7+jQ3Y5AAAADklEQVQI12P4AIX8EAgALgAD/aNpbtEAAAAASUVORK5CYII";
 
 const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
   title = "MJPEG Stream",
@@ -172,6 +172,8 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
       }
     } catch (err) {
       console.error("Fullscreen error:", err);
+      // Force update fullscreen state in case of error
+      setIsFullscreen(false);
     }
   };
 
@@ -250,7 +252,7 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
               bgcolor="rgba(0,0,0,0.5)"
             >
               <Stack spacing={1} alignItems="center">
-                <Typography variant="body2" color="white">
+                <Typography variant="caption" color="white">
                   Loading stream...
                 </Typography>
                 <Typography
@@ -276,22 +278,21 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
               justifyContent="center"
               bgcolor="rgba(0,0,0,0.6)"
             >
-              <Stack
-                spacing={2}
-                alignItems="center"
-                sx={{ textAlign: "center", px: 2 }}
-              >
-                <Typography variant="body2" color="white" sx={{ opacity: 0.8 }}>
+              <Stack spacing={1} alignItems="center">
+                <Typography
+                  variant="caption"
+                  color="white"
+                  sx={{ opacity: 0.8 }}
+                  textOverflow="ellipsis"
+                  overflow={"hidden"}
+                  width="20ch"
+                >
                   {error}
                 </Typography>
 
                 {isStreaming && (
-                  <IconButton
-                    onClick={refreshStream}
-                    color="primary"
-                    size="large"
-                  >
-                    <Refresh />
+                  <IconButton onClick={refreshStream} size="small">
+                    <Refresh fontSize="inherit" />
                   </IconButton>
                 )}
               </Stack>
@@ -310,24 +311,14 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
               justifyContent="center"
               bgcolor="rgba(0,0,0,0.7)"
             >
-              <IconButton
-                onClick={togglePlayPause}
-                size="large"
-                color="primary"
-              >
-                <PlayArrow fontSize="large" />
+              <IconButton onClick={togglePlayPause} size="small">
+                <PlayArrow fontSize="inherit" />
               </IconButton>
             </Box>
           )}
 
-          {controls && (
-            <Box
-              position="absolute"
-              bottom={0}
-              left={0}
-              right={0}
-              bgcolor="rgba(0,0,0,0.7)"
-            >
+          {controls && !isFullscreen && (
+            <Box position="absolute" bottom={0} left={0} right={0}>
               <Stack
                 direction="row"
                 spacing={1}
@@ -338,13 +329,13 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Tooltip title={isPlaying ? "Stop Stream" : "Start Stream"}>
                     <IconButton onClick={togglePlayPause} size="small">
-                      {isPlaying ? <Pause /> : <PlayArrow />}
+                      {isPlaying ? (
+                        <Pause fontSize="inherit" />
+                      ) : (
+                        <PlayArrow fontSize="inherit" />
+                      )}
                     </IconButton>
                   </Tooltip>
-
-                  <Typography variant="caption" color="white">
-                    {title}
-                  </Typography>
                 </Stack>
 
                 <Stack direction="row" spacing={1}>
@@ -352,7 +343,11 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
                     title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                   >
                     <IconButton onClick={toggleFullscreen} size="small">
-                      {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
+                      {isFullscreen ? (
+                        <FullscreenExit fontSize="inherit" />
+                      ) : (
+                        <Fullscreen fontSize="inherit" />
+                      )}
                     </IconButton>
                   </Tooltip>
                 </Stack>

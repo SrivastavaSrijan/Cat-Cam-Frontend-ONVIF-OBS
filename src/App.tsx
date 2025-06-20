@@ -3,7 +3,6 @@ import { useState, useRef, useEffect } from "react";
 import {
   CssBaseline,
   Container,
-  Grid,
   Box,
   Typography,
   Stack,
@@ -17,7 +16,6 @@ import {
 } from "@mui/material";
 import { MoreVert, Cable, Restore, Gesture } from "@mui/icons-material";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
-import { useSwipeable } from "react-swipeable";
 import darkTheme from "./theme";
 import {
   Navbar,
@@ -97,67 +95,29 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Tab navigation order
-  const tabOrder = [1, 2, 3];
-
-  // Swipe handlers
-  const swipeHandlers = useSwipeable({
-    onSwipedLeft: () => {
-      const currentIndex = tabOrder.indexOf(value);
-      const nextIndex = (currentIndex + 1) % tabOrder.length;
-      setValue(tabOrder[nextIndex]);
-    },
-    onSwipedRight: () => {
-      const currentIndex = tabOrder.indexOf(value);
-      const prevIndex =
-        currentIndex === 0 ? tabOrder.length - 1 : currentIndex - 1;
-      setValue(tabOrder[prevIndex]);
-    },
-    trackMouse: true,
-    trackTouch: true,
-    preventScrollOnSwipe: true,
-    delta: 50, // Minimum swipe distance
-  });
-
   const renderTabContent = () => {
     switch (value) {
       case 1:
         return (
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6} lg={4}>
-              <Stack spacing={3}>
-                <CameraSelector />
-                <CameraControl />
-                <MjpegPlayer
-                  title="SSV Cam"
-                  height={200}
-                  autoPlay={true}
-                  controls={true}
-                />
-                <ActionBar />
-                <MovementControls />
-              </Stack>
-            </Grid>
-          </Grid>
+          <Stack spacing={3}>
+            <CameraSelector />
+            <CameraControl />
+            <MjpegPlayer
+              title="SSV Cam"
+              height={200}
+              autoPlay={true}
+              controls={true}
+            />
+            <ActionBar />
+            <MovementControls />
+          </Stack>
         );
 
       case 2:
-        return (
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <RunnerScript />
-            </Grid>
-          </Grid>
-        );
+        return <RunnerScript />;
 
       case 3:
-        return (
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Status />
-            </Grid>
-          </Grid>
-        );
+        return <Status />;
 
       default:
         return (
@@ -183,8 +143,10 @@ const App: React.FC = () => {
           <div className="App">
             <Navbar value={value} handleChange={handleChange} />
 
-            <Container maxWidth="xl" {...swipeHandlers}>
-              <Box py={3}>{renderTabContent()}</Box>
+            <Container maxWidth="sm">
+              <Box py={3} mx="auto">
+                {renderTabContent()}
+              </Box>
             </Container>
 
             {/* Floating Action Buttons */}

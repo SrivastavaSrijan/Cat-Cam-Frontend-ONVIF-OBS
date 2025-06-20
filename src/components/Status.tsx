@@ -118,7 +118,7 @@ const Status: React.FC = () => {
                     Pan
                   </Typography>
                   <Typography variant="h6">
-                    {formatPosition(currentStatus.PTZPosition.PanTilt?.x)}
+                    {formatPosition(currentStatus.PTZPosition?.PanTilt?.x)}
                   </Typography>
                 </Stack>
               </Grid>
@@ -128,7 +128,7 @@ const Status: React.FC = () => {
                     Tilt
                   </Typography>
                   <Typography variant="h6">
-                    {formatPosition(currentStatus.PTZPosition.PanTilt.y)}
+                    {formatPosition(currentStatus.PTZPosition?.PanTilt?.y)}
                   </Typography>
                 </Stack>
               </Grid>
@@ -141,7 +141,7 @@ const Status: React.FC = () => {
                     Zoom
                   </Typography>
                   <Typography variant="h6">
-                    {formatPosition(currentStatus.PTZPosition.Zoom.x)}
+                    {formatPosition(currentStatus.PTZPosition?.Zoom?.x)}
                   </Typography>
                 </Stack>
               </Grid>
@@ -175,7 +175,14 @@ const Status: React.FC = () => {
                         <Typography variant="subtitle1">
                           {camera.nickname}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          textOverflow="ellipsis"
+                          overflow="hidden"
+                          whiteSpace="nowrap"
+                          width="25ch"
+                        >
                           {camera.host}:{camera.port}
                         </Typography>
                       </Stack>

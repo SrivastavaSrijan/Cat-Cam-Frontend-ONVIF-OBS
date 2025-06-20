@@ -44,6 +44,7 @@ export interface CameraData {
 }
 
 type CameraDataCallback = (data: CameraData) => void;
+export type StreamView = "grid" | "highlight";
 
 export const useCameraDataManager = () => {
   const [cameraData, setCameraData] = useState<Record<string, CameraData>>({});
@@ -55,14 +56,12 @@ export const useCameraDataManager = () => {
   const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
   const [allCameras, setAllCameras] = useState<CameraInfo[]>([]);
   const [camerasLoaded, setCamerasLoaded] = useState(false);
-  const [currentTransformation, setCurrentTransformation] = useState<
-    "highlight" | "grid"
-  >("grid");
+  const [streamView, setStreamView] = useState<StreamView>("grid");
 
   const { loading, withLoading } = useLoading();
   const { showError, showSuccess } = useNotification();
   const api = useApi();
-  const { switchStreamView, getCurrentTransformation } = useOBSControl();
+  const { switchStreamView, getStreamView } = useOBSControl();
 
   const loadingRef = useRef<Set<string>>(new Set());
   const callbacksRef = useRef<Record<string, Set<CameraDataCallback>>>({});
@@ -281,18 +280,17 @@ export const useCameraDataManager = () => {
 
       // Check current OBS transformation to see if a camera is already highlighted
       try {
-        const currentTransformation = await getCurrentTransformation();
-        setCurrentTransformation(currentTransformation?.layout_mode || "grid");
+        const currentStreamView = await getStreamView();
         if (
-          currentTransformation?.layout_mode === "highlight" &&
-          currentTransformation?.highlighted_source
+          currentStreamView?.layout_mode === "highlight" &&
+          currentStreamView?.highlighted_source
         ) {
           // Check if the highlighted source corresponds to an online camera
           const onlineCameras = cameras.filter(
             (cam) => cam.status === "online"
           );
           const highlightedCamera = onlineCameras.find(
-            (cam) => cam.nickname === currentTransformation.highlighted_source
+            (cam) => cam.nickname === currentStreamView.highlighted_source
           );
 
           if (highlightedCamera) {
@@ -330,7 +328,7 @@ export const useCameraDataManager = () => {
     } finally {
       cameraListLoadingRef.current = false;
     }
-  }, [api, camerasLoaded, selectedCamera, showError, getCurrentTransformation]);
+  }, [api, camerasLoaded, selectedCamera, showError, getStreamView]);
 
   const selectCamera = useCallback(
     (nickname: string) => {
@@ -372,7 +370,9 @@ export const useCameraDataManager = () => {
       isLoadingCameras: cameraListLoadingRef.current,
       loadCameraList,
       selectCamera,
-      currentTransformation,
+
+      // OBS control
+      streamView,
     }),
     [
       subscribeToCamera,
@@ -391,7 +391,7 @@ export const useCameraDataManager = () => {
       totalCameraCount,
       loadCameraList,
       selectCamera,
-      currentTransformation,
+      streamView,
     ]
   );
 };
