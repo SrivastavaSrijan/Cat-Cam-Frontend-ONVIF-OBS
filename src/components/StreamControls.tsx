@@ -7,7 +7,6 @@ import {
   ToggleButtonGroup,
   ToggleButton,
   Button,
-  Chip,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -16,7 +15,6 @@ import {
   Box,
   CircularProgress,
   Typography,
-  Divider,
   IconButton,
 } from "@mui/material";
 import {
@@ -27,9 +25,7 @@ import {
   Close,
   PlayArrow,
   Stop,
-  Assignment,
   Refresh,
-  Circle,
 } from "@mui/icons-material";
 import { useApi, useLoading, useMjpegStream } from "../hooks";
 
@@ -52,7 +48,6 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
   const {
     isStreaming,
     isLoading,
-    streamUrl,
     startStream,
     stopStream,
     fetchLogs,
@@ -139,11 +134,11 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
     }
   };
 
-  const handleShowLogs = async () => {
-    const latestLogs = await fetchLogs();
-    setCurrentLogs(latestLogs);
-    setLogsDialogOpen(true);
-  };
+  // const handleShowLogs = async () => {
+  //   const latestLogs = await fetchLogs();
+  //   setCurrentLogs(latestLogs);
+  //   setLogsDialogOpen(true);
+  // };
 
   const handleRefreshLogs = async () => {
     const latestLogs = await fetchLogs();

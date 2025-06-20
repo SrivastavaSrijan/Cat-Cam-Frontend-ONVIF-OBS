@@ -1,5 +1,5 @@
 import type React from "react";
-import { AppBar, Box, Tab, Tabs } from "@mui/material";
+import { AppBar, Tab, Tabs } from "@mui/material";
 import { Videocam, VideoSettings, Analytics } from "@mui/icons-material";
 
 interface NavbarProps {

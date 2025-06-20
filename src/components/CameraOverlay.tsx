@@ -56,11 +56,24 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ open, onClose }) => {
   const cameraSlots = getCameraSlots();
 
   return (
-    <Dialog open={open} onClose={onClose} fullScreen>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullScreen
+      sx={{
+        "& .MuiDialog-paper": {
+          backgroundColor: "rgba(0, 0, 0, 0.3)", // Semi-transparent background
+        },
+      }}
+    >
       <DialogContent
         {...swipeHandlers}
         onClick={handleDoubleTap}
-        sx={{ "& > *": { userSelect: "none" } }}
+        sx={{
+          "& > *": { userSelect: "none" },
+          backgroundColor: "transparent", // Make content transparent too
+          padding: 2,
+        }}
       >
         {/* Swipe Indicators with backdrop */}
         <Fade in={Boolean(swipeIndicator.direction)} timeout={100}>

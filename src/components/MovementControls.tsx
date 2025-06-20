@@ -1,5 +1,4 @@
 import type React from "react";
-import { useCallback } from "react";
 import {
   Stack,
   IconButton,
@@ -19,7 +18,7 @@ import { useAutoDismissError, useCameraControl } from "../hooks";
 
 const MovementControls: React.FC = () => {
   const { selectedCamera } = useCameraDataManagerContext();
-  const { error, setError } = useAutoDismissError();
+  const { setError } = useAutoDismissError();
   const { loading, moveCamera } = useCameraControl(selectedCamera);
 
   const handleMove = async (direction: string) => {
