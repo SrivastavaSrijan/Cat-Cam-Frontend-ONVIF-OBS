@@ -11,9 +11,11 @@ RUN yarn
 # Copy the rest of the application
 COPY . .
 
+# Set the correct API base URL for Caddy routing
+ENV REACT_APP_API_BASE_URL=https://ssvcam.srijansrivastava.com/api
+
 # Build the application
 RUN yarn build
-ENV REACT_APP_API_BASE_URL=http://ssvsrijan.ddns.net:5000
 
 # Use a lightweight server for deployment
 FROM nginx:alpine

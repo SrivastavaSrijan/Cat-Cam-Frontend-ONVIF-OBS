@@ -14,7 +14,6 @@ import {
   Fullscreen,
   FullscreenExit,
   Refresh,
-  PictureInPicture,
 } from "@mui/icons-material";
 import StreamControls from "./StreamControls";
 import { useMjpegStream } from "../hooks";
@@ -47,15 +46,9 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [streamSrc, setStreamSrc] = useState<string>("");
-  const [isPipSupported, setIsPipSupported] = useState(false);
 
   // Use MJPEG stream hook
   const { isStreaming, streamUrl } = useMjpegStream();
-
-  // Check for PiP support
-  useEffect(() => {
-    setIsPipSupported("pictureInPictureEnabled" in document);
-  }, []);
 
   const startStream = useCallback(() => {
     if (!streamUrl) {
@@ -69,7 +62,12 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
       clearTimeout(loadingTimeoutRef.current);
     }
 
-    setStreamSrc(streamUrl);
+    // Add cache-busting parameters and headers to prevent any caching
+    const cacheBustingUrl = `${streamUrl}${
+      streamUrl.includes("?") ? "&" : "?"
+    }t=${Date.now()}&nocache=${Math.random()}`;
+
+    setStreamSrc(cacheBustingUrl);
     setIsPlaying(true);
     setError(null);
     setIsLoading(true);
@@ -124,10 +122,16 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
 
   const refreshStream = () => {
     if (isStreaming && streamUrl) {
+      // Force stop current stream
       stopStream();
+      // Clear the image source completely to force reload
+      if (imgRef.current) {
+        imgRef.current.src = placeholderImage;
+      }
+      // Wait a bit longer and then restart with fresh cache-busting URL
       setTimeout(() => {
         startStream();
-      }, 300);
+      }, 500);
     }
   };
 
@@ -142,7 +146,8 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
           // biome-ignore lint/suspicious/noExplicitAny: <explanation>
           if ((window.screen.orientation as any)?.lock) {
             try {
-              await window.screen.orientation.lock("landscape");
+              // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+              await (window.screen.orientation as any).lock("landscape");
             } catch (orientationError) {
               console.log(
                 "Orientation lock not supported or failed:",
@@ -169,81 +174,6 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
       console.error("Fullscreen error:", err);
     }
   };
-
-  const togglePictureInPicture = async () => {
-    if (!imgRef.current || !isPipSupported) return;
-
-    try {
-      // Create a canvas to convert the img to a video element for PiP
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      const video = document.createElement("video");
-
-      if (!ctx) return;
-
-      // Set canvas size to match image
-      canvas.width = imgRef.current.naturalWidth || 640;
-      canvas.height = imgRef.current.naturalHeight || 480;
-
-      // Draw the current frame
-      ctx.drawImage(imgRef.current, 0, 0);
-
-      // Convert canvas to blob and create object URL
-      canvas.toBlob(async (blob) => {
-        if (!blob) return;
-
-        const videoUrl = URL.createObjectURL(blob);
-        video.src = videoUrl;
-        video.muted = true;
-        video.loop = true;
-
-        // Wait for video to load
-        video.addEventListener("loadeddata", async () => {
-          try {
-            if (document.pictureInPictureElement) {
-              await document.exitPictureInPicture();
-            } else {
-              await video.requestPictureInPicture();
-            }
-          } catch (pipError) {
-            console.error("Picture-in-Picture error:", pipError);
-          }
-        });
-
-        video.load();
-      }, "video/webm");
-    } catch (err) {
-      console.error("Picture-in-Picture error:", err);
-    }
-  };
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      const isCurrentlyFullscreen = Boolean(document.fullscreenElement);
-      setIsFullscreen(isCurrentlyFullscreen);
-
-      // Handle orientation when fullscreen changes
-      if (
-        !isCurrentlyFullscreen &&
-        window.screen.orientation &&
-        window.screen.orientation.unlock
-      ) {
-        try {
-          window.screen.orientation.unlock();
-        } catch (orientationError) {
-          console.log(
-            "Orientation unlock on fullscreen exit failed:",
-            orientationError
-          );
-        }
-      }
-    };
-
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-    };
-  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -279,6 +209,10 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
               backgroundColor: "black",
               display: "block",
             }}
+            // Add attributes to prevent caching
+            crossOrigin="anonymous"
+            decoding="async"
+            loading="eager"
             onLoad={() => {
               if (loadingTimeoutRef.current) {
                 clearTimeout(loadingTimeoutRef.current);
@@ -414,14 +348,6 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
                 </Stack>
 
                 <Stack direction="row" spacing={1}>
-                  {isPipSupported && (
-                    <Tooltip title="Picture in Picture">
-                      <IconButton onClick={togglePictureInPicture} size="small">
-                        <PictureInPicture />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-
                   <Tooltip
                     title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                   >

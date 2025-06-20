@@ -2,6 +2,7 @@ export { default as ActionBar } from "./ActionBar";
 export { default as CameraControl } from "./CameraControl";
 export { default as CameraOverlay } from "./CameraOverlay";
 export { default as CameraSelector } from "./CameraSelector";
+export { default as InstallPrompt } from "./InstallPrompt";
 export { default as MjpegPlayer } from "./MjpegPlayer";
 export { default as Navbar } from "./Navbar";
 export { default as RunnerScript } from "./RunnerScript";

@@ -28,11 +28,11 @@ import {
   CameraOverlay,
   RunnerScript,
   MjpegPlayer,
+  InstallPrompt,
 } from "./components";
 import { CameraDataManagerProvider } from "./contexts/CameraDataManagerContext";
 import { NotificationProvider } from "./contexts";
 import { useOBSControl } from "./hooks";
-import { API_BASE_URL, OBS_ENDPOINTS } from "./config";
 import MovementControls from "./components/MovementControls";
 
 const App: React.FC = () => {
@@ -267,6 +267,9 @@ const App: React.FC = () => {
               open={cameraOverlayOpen}
               onClose={() => setCameraOverlayOpen(false)}
             />
+
+            {/* PWA Install Prompt */}
+            <InstallPrompt />
           </div>
         </CameraDataManagerProvider>
       </NotificationProvider>
