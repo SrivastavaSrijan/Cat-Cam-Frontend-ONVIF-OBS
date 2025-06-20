@@ -22,9 +22,9 @@ const ActionBar: React.FC = () => {
   const [nightMode, setNightMode] = useState<boolean | undefined>(undefined);
   const [nightModeLoading, setNightModeLoading] = useState(false);
 
-  const { selectedCamera } = useCameraDataManagerContext();
+  const { selectedCamera, streamView } = useCameraDataManagerContext();
   const { error, setError } = useAutoDismissError();
-  const { switchStreamView, streamView } = useOBSControl();
+  const { switchStreamView } = useOBSControl();
   const api = useApi();
   // Check night mode status
   const checkNightMode = useCallback(async () => {
@@ -88,7 +88,7 @@ const ActionBar: React.FC = () => {
             alignItems="center"
           >
             <ToggleButtonGroup
-              value={streamView}
+              value={streamView?.layout_mode || "grid"}
               exclusive
               onChange={(_, newView) => {
                 if (newView) {

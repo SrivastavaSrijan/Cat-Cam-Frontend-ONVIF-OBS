@@ -8,3 +8,4 @@ export { default as Navbar } from "./Navbar";
 export { default as RunnerScript } from "./RunnerScript";
 export { default as Status } from "./Status";
 export { default as StreamControls } from "./StreamControls";
+export { default as Fabs } from "./Fabs";

@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import { Circle as CircleIcon } from "@mui/icons-material";
 import { useCameraDataManagerContext } from "../contexts/CameraDataManagerContext";
+import { useOBSControl } from "../hooks";
 
 const CameraSelector: React.FC = () => {
   const {
@@ -22,6 +23,8 @@ const CameraSelector: React.FC = () => {
     isLoadingCameras,
   } = useCameraDataManagerContext();
 
+  const { switchStreamView } = useOBSControl();
+
   // Load cameras when component first renders
   if (allCameras.length === 0 && !isLoadingCameras) {
     loadCameraList();
@@ -32,6 +35,7 @@ const CameraSelector: React.FC = () => {
     const cameraData = allCameras.find((c) => c.nickname === camera);
     if (cameraData?.status === "online") {
       selectCamera(camera);
+      switchStreamView("highlight", cameraData.nickname);
     }
   };
 

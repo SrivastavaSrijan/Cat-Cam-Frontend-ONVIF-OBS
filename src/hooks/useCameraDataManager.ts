@@ -2,7 +2,6 @@ import { useState, useCallback, useRef, useMemo } from "react";
 import { useApi } from "./useApi";
 import { useNotification } from "./useNotification";
 import { useLoading } from "./useLoading";
-import { useOBSControl } from "./useOBSControl";
 
 interface Preset {
   Name: string;
@@ -44,7 +43,10 @@ export interface CameraData {
 }
 
 type CameraDataCallback = (data: CameraData) => void;
-export type StreamView = "grid" | "highlight";
+export type StreamView = {
+  layout_mode: "grid" | "highlight";
+  highlighted_source?: string;
+};
 
 export const useCameraDataManager = () => {
   const [cameraData, setCameraData] = useState<Record<string, CameraData>>({});
@@ -56,12 +58,13 @@ export const useCameraDataManager = () => {
   const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
   const [allCameras, setAllCameras] = useState<CameraInfo[]>([]);
   const [camerasLoaded, setCamerasLoaded] = useState(false);
-  const [streamView, setStreamView] = useState<StreamView>("grid");
+  const [streamView, setStreamView] = useState<StreamView | undefined>(
+    undefined
+  );
 
   const { loading, withLoading } = useLoading();
   const { showError, showSuccess } = useNotification();
   const api = useApi();
-  const { switchStreamView, getStreamView } = useOBSControl();
 
   const loadingRef = useRef<Set<string>>(new Set());
   const callbacksRef = useRef<Record<string, Set<CameraDataCallback>>>({});
@@ -257,6 +260,10 @@ export const useCameraDataManager = () => {
     [cameraData]
   );
 
+  const selectStreamView = useCallback((params: StreamView) => {
+    setStreamView(params);
+  }, []);
+
   const isCameraMoving = useCallback(
     (nickname: string): boolean => {
       return isContinuousMoving[nickname] || false;
@@ -280,17 +287,15 @@ export const useCameraDataManager = () => {
 
       // Check current OBS transformation to see if a camera is already highlighted
       try {
-        const currentStreamView = await getStreamView();
-        if (
-          currentStreamView?.layout_mode === "highlight" &&
-          currentStreamView?.highlighted_source
-        ) {
+        const currentStreamView = await withLoading(() => api.obsStreamView());
+        selectStreamView(currentStreamView);
+        if (currentStreamView?.layout_mode === "highlight") {
           // Check if the highlighted source corresponds to an online camera
           const onlineCameras = cameras.filter(
             (cam) => cam.status === "online"
           );
           const highlightedCamera = onlineCameras.find(
-            (cam) => cam.nickname === currentStreamView.highlighted_source
+            (cam) => cam.nickname === currentStreamView?.highlighted_source
           );
 
           if (highlightedCamera) {
@@ -328,16 +333,19 @@ export const useCameraDataManager = () => {
     } finally {
       cameraListLoadingRef.current = false;
     }
-  }, [api, camerasLoaded, selectedCamera, showError, getStreamView]);
+  }, [
+    api,
+    camerasLoaded,
+    selectStreamView,
+    selectedCamera,
+    showError,
+    withLoading,
+  ]);
 
-  const selectCamera = useCallback(
-    (nickname: string) => {
-      setSelectedCamera(nickname);
-      console.log("Camera selected:", nickname);
-      switchStreamView("highlight", nickname);
-    },
-    [switchStreamView]
-  );
+  const selectCamera = useCallback((nickname: string) => {
+    setSelectedCamera(nickname);
+    console.log("Camera selected:", nickname);
+  }, []);
 
   const cameraList = useMemo(() => {
     return allCameras
@@ -373,6 +381,7 @@ export const useCameraDataManager = () => {
 
       // OBS control
       streamView,
+      selectStreamView,
     }),
     [
       subscribeToCamera,
@@ -392,6 +401,7 @@ export const useCameraDataManager = () => {
       loadCameraList,
       selectCamera,
       streamView,
+      selectStreamView,
     ]
   );
 };

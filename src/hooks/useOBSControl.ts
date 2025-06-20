@@ -2,26 +2,32 @@ import { useState, useCallback } from "react";
 import { useApi } from "./useApi";
 import { useNotification } from "./useNotification";
 import { useLoading } from "./useLoading";
-
-export type StreamView = "grid" | "highlight";
+import { useCameraDataManagerContext } from "../contexts/CameraDataManagerContext";
+import type { StreamView } from "./useCameraDataManager";
 
 export const useOBSControl = () => {
-  const [streamView, setStreamView] = useState<StreamView>("grid");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { loading, withLoading } = useLoading();
   const { showError, showSuccess } = useNotification();
   const api = useApi();
 
+  const { selectStreamView } = useCameraDataManagerContext();
+
   const switchStreamView = useCallback(
-    async (view: StreamView, activeCamera?: string) => {
+    async (view: StreamView["layout_mode"], activeCamera?: string) => {
       try {
         if (view === "highlight" && activeCamera) {
           await withLoading(() => api.obsTransform("highlight", activeCamera));
-          setStreamView("highlight");
           showSuccess(`Switched to highlight view for ${activeCamera}`);
+          selectStreamView({
+            layout_mode: "highlight",
+            highlighted_source: activeCamera,
+          });
         } else if (view === "grid") {
           await withLoading(() => api.obsTransform("grid"));
-          setStreamView("grid");
+          selectStreamView({
+            layout_mode: "grid",
+          });
           showSuccess("Switched to mosaic view");
         }
       } catch (error) {
@@ -30,7 +36,7 @@ export const useOBSControl = () => {
         );
       }
     },
-    [withLoading, api, showSuccess, showError]
+    [withLoading, showSuccess, selectStreamView, api, showError]
   );
 
   const switchScene = useCallback(
@@ -76,25 +82,12 @@ export const useOBSControl = () => {
     }
   }, [api, showSuccess, showError]);
 
-  const getStreamView = useCallback(async () => {
-    try {
-      const currentStreamView = await api.obsStreamView();
-      setStreamView(currentStreamView.layout_mode);
-      return currentStreamView;
-    } catch (error) {
-      console.error("Failed to get current transformation:", error);
-      throw error;
-    }
-  }, [api]);
-
   return {
     isRefreshing,
-    streamView,
     loading,
     switchStreamView,
     switchScene,
     reconnect,
     refreshStreams,
-    getStreamView,
   };
 };

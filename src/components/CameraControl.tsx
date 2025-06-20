@@ -13,12 +13,11 @@ import { Refresh, Videocam } from "@mui/icons-material";
 import { useCameraDataManagerContext } from "../contexts/CameraDataManagerContext";
 import { useCameraControl, useAutoDismissError } from "../hooks";
 import { CAMERA_PRESETS } from "../utils/contants";
-import MovementControls from "./MovementControls";
 
 const CameraControl: React.FC = () => {
   const { selectedCamera } = useCameraDataManagerContext();
   const { error, setError } = useAutoDismissError();
-  const { presets, selectedPreset, loading, gotoPreset, moveCamera, refresh } =
+  const { presets, selectedPreset, loading, gotoPreset, refresh } =
     useCameraControl(selectedCamera);
 
   if (!selectedCamera) {
