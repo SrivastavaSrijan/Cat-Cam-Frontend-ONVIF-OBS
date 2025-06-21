@@ -190,28 +190,6 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({
         mx="auto"
         overflow={"hidden"}
       >
-        {/* Mode Indicator */}
-        <Box onClick={handleDoubleTap} display={"none"}>
-          <ToggleButtonGroup
-            value={cameraMode}
-            exclusive
-            onChange={(_, newMode) => {
-              if (newMode !== null) {
-                setCameraMode(newMode);
-              }
-            }}
-            size="large"
-          >
-            <ToggleButton value="normal">
-              <CameraAlt fontSize="inherit" />
-            </ToggleButton>
-            <ToggleButton value="move">
-              <PanTool fontSize="inherit" />
-            </ToggleButton>
-          </ToggleButtonGroup>
-        </Box>
-        <Box flex={1} />
-
         <Stack direction="row" spacing={1}>
           <IconButton onClick={handleHelpClick} size="small">
             <Info fontSize="inherit" />
