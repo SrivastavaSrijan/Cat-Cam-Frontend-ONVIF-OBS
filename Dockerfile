@@ -13,6 +13,7 @@ COPY . .
 
 # Set the correct API base URL for Caddy routing
 ENV REACT_APP_API_BASE_URL=https://ssvcam.srijansrivastava.com/api
+ENV REACT_APP_MJPEG_BASE_URl=https://ssvcam.srijansrivastava.com/stream
 
 # Build the application
 RUN yarn build

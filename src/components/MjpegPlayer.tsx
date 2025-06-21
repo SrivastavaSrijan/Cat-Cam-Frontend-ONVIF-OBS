@@ -1,5 +1,5 @@
 import type React from "react";
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   Box,
   IconButton,
@@ -9,8 +9,6 @@ import {
   Stack,
 } from "@mui/material";
 import {
-  PlayArrow,
-  Pause,
   Fullscreen,
   FullscreenExit,
   Refresh,
@@ -26,10 +24,18 @@ interface MjpegPlayerProps {
   autoPlay?: boolean;
   controls?: boolean;
   onCameraOverlay?: () => void;
+  // Add overlay props
+  overlayOpen?: boolean;
+  onOverlayClose?: () => void;
+  OverlayComponent?: React.ComponentType<{
+    open: boolean;
+    onClose: () => void;
+    orientation?: "portrait" | "landscape" | "auto";
+  }>;
 }
-// Base64 placeholder image (simple camera icon)
+// Simple black placeholder
 const placeholderImage =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAIAQMAAAD+wSzIAAAABlBMVEX///+/v7+jQ3Y5AAAADklEQVQI12P4AIX8EAgALgAD/aNpbtEAAAAASUVORK5CYII";
+  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMSIgaGVpZ2h0PSIxIiB2aWV3Qm94PSIwIDAgMSAxIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiMwMDAiLz48L3N2Zz4=";
 
 const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
   title = "MJPEG Stream",
@@ -38,83 +44,70 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
   autoPlay = true,
   controls = true,
   onCameraOverlay,
+  overlayOpen = false,
+  onOverlayClose,
+  OverlayComponent,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const loadingTimeoutRef = useRef<NodeJS.Timeout>();
-  const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   // Use MJPEG stream hook
   const { streamURL, streamPlayerRef, isStreaming } = useAppContext();
   const { stopStream, startStream } = useMjpegStream();
 
-  const handleStartStream = useCallback(() => {
-    if (!streamURL) {
-      setError("No stream URL available");
-      setIsLoading(false);
-      return;
-    }
+  // Auto-start stream once when component mounts if autoPlay is enabled
+  const [hasAutoStarted, setHasAutoStarted] = useState(false);
 
-    // Clear any existing timeout
-    if (loadingTimeoutRef.current) {
-      clearTimeout(loadingTimeoutRef.current);
-    }
-
-    setIsPlaying(true);
-    setError(null);
-    setIsLoading(true);
-
-    // Set a timeout to handle stuck loading
-    loadingTimeoutRef.current = setTimeout(() => {
-      setIsLoading(false);
-      setError(`Stream loading timeout. URL: ${streamURL}`);
-    }, 8000);
-  }, [streamURL]);
-
-  // Handle stream status changes
   useEffect(() => {
-    if (isStreaming && streamURL && isPlaying) {
-      // Stream is available and we want to play
-      handleStartStream();
-    } else if (!isStreaming) {
-      // Stream stopped, show placeholder
-      setError("Stream is not running");
-      setIsLoading(false);
-    }
-  }, [isStreaming, streamURL, isPlaying, handleStartStream]);
+    let mounted = true;
 
-  // Auto-start when stream becomes available
-  useEffect(() => {
-    if (autoPlay && isStreaming && streamURL) {
-      setIsPlaying(true);
-      handleStartStream();
+    if (autoPlay && !hasAutoStarted && !isStreaming && mounted) {
+      setHasAutoStarted(true);
+      console.log("Auto-starting MJPEG stream...");
+      startStream().catch((error) => {
+        console.error("Auto-start failed:", error);
+        if (mounted) {
+          setError("Failed to auto-start stream");
+        }
+      });
     }
-  }, [autoPlay, isStreaming, streamURL, handleStartStream]);
 
-  const togglePlayPause = () => {
-    if (isPlaying) {
-      stopStream();
-    } else if (isStreaming && streamURL) {
-      startStream();
-    } else {
-      setError("Stream is not available");
-    }
-  };
+    return () => {
+      mounted = false;
+    };
+  }, [autoPlay, hasAutoStarted, isStreaming, startStream]);
 
-  const refreshStream = () => {
-    if (isStreaming && streamURL) {
-      // Force stop current stream
-      stopStream();
-      // Clear the image source completely to force reload
+  // Simple refresh function
+  const refreshStream = async () => {
+    try {
+      console.log("Refreshing MJPEG stream...");
+      setError(null);
+
+      // If there's no stream running, just try to start it
+      if (!isStreaming) {
+        await startStream();
+        return;
+      }
+
+      // If stream is running but we have an error, restart it
       if (streamPlayerRef.current) {
         streamPlayerRef.current.src = placeholderImage;
       }
-      // Wait a bit longer and then restart with fresh cache-busting URL
-      setTimeout(() => {
-        startStream();
+
+      await stopStream();
+
+      setTimeout(async () => {
+        try {
+          await startStream();
+        } catch (error) {
+          console.error("Error restarting stream:", error);
+          setError("Failed to restart stream");
+        }
       }, 500);
+    } catch (error) {
+      console.error("Error refreshing stream:", error);
+      setError("Failed to refresh stream");
     }
   };
 
@@ -200,15 +193,6 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
     };
   }, []);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-      }
-    };
-  }, []);
-
   return (
     <Stack spacing={2}>
       {/* Stream Controls */}
@@ -233,34 +217,39 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
               backgroundColor: "black",
               display: "block",
             }}
-            // Add attributes to prevent caching
-            crossOrigin="anonymous"
-            decoding="async"
-            loading="eager"
-            onLoad={() => {
-              if (loadingTimeoutRef.current) {
-                clearTimeout(loadingTimeoutRef.current);
-              }
-              // Only clear loading if it's not the placeholder image
-              if (streamURL !== placeholderImage && streamURL) {
-                setIsLoading(false);
-                setError(null);
-              }
-            }}
             onError={(e) => {
-              if (loadingTimeoutRef.current) {
-                clearTimeout(loadingTimeoutRef.current);
-              }
-              setIsLoading(false);
-              if (streamURL !== placeholderImage && streamURL) {
-                setError(`Failed to load MJPEG stream from: ${streamURL}`);
-                // Don't automatically fall back to placeholder - let the user retry
-              }
               console.error("Stream error:", e);
+              if (streamURL !== placeholderImage && streamURL) {
+                setError(`Failed to load stream from: ${streamURL}`);
+              }
             }}
           />
 
-          {isLoading && streamURL && streamURL !== placeholderImage && (
+          {/* Render overlay inside fullscreen container */}
+          {OverlayComponent && overlayOpen && (
+            <Box
+              position="absolute"
+              top={0}
+              left={0}
+              right={0}
+              bottom={0}
+              zIndex={9999}
+              sx={{
+                backdropFilter: "blur(3px)",
+                background:
+                  "linear-gradient(45deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.4) 100%)",
+              }}
+            >
+              <OverlayComponent
+                open={overlayOpen}
+                onClose={onOverlayClose || (() => {})}
+                orientation={isFullscreen ? "landscape" : "auto"}
+              />
+            </Box>
+          )}
+
+          {/* Show loading text when no stream URL */}
+          {!streamURL && (
             <Box
               position="absolute"
               top={0}
@@ -270,23 +259,15 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
               display="flex"
               alignItems="center"
               justifyContent="center"
-              bgcolor="rgba(0,0,0,0.5)"
+              bgcolor="rgba(0,0,0,0.8)"
             >
-              <Stack spacing={1} alignItems="center">
-                <Typography variant="caption" color="white">
-                  Loading stream...
-                </Typography>
-                <Typography
-                  variant="caption"
-                  color="white"
-                  sx={{ opacity: 0.7 }}
-                >
-                  {streamURL}
-                </Typography>
-              </Stack>
+              <Typography variant="h6" color="white">
+                {isStreaming ? "Loading stream..." : "No stream available"}
+              </Typography>
             </Box>
           )}
 
+          {/* Show error overlay */}
           {error && (
             <Box
               position="absolute"
@@ -297,48 +278,24 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
               display="flex"
               alignItems="center"
               justifyContent="center"
-              bgcolor="rgba(0,0,0,0.6)"
+              bgcolor="rgba(0,0,0,0.8)"
             >
-              <Stack spacing={1} alignItems="center">
-                <Typography
-                  variant="caption"
-                  color="white"
-                  sx={{ opacity: 0.8 }}
-                  textOverflow="ellipsis"
-                  overflow={"hidden"}
-                  width="20ch"
-                >
+              <Stack spacing={2} alignItems="center">
+                <Typography variant="body2" color="white" textAlign="center">
                   {error}
                 </Typography>
-
-                {isStreaming && (
-                  <IconButton onClick={refreshStream} size="small">
-                    <Refresh fontSize="inherit" />
-                  </IconButton>
-                )}
+                <IconButton
+                  onClick={refreshStream}
+                  size="small"
+                  color="primary"
+                >
+                  <Refresh />
+                </IconButton>
               </Stack>
             </Box>
           )}
 
-          {!isPlaying && !isLoading && !error && (
-            <Box
-              position="absolute"
-              top={0}
-              left={0}
-              right={0}
-              bottom={0}
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              bgcolor="rgba(0,0,0,0.7)"
-            >
-              <IconButton onClick={togglePlayPause} size="small">
-                <PlayArrow fontSize="inherit" />
-              </IconButton>
-            </Box>
-          )}
-
-          {controls && (
+          {controls && (error || !streamURL) && (
             <Box position="absolute" bottom={0} left={0} right={0}>
               <Stack
                 direction="row"
@@ -348,13 +305,9 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
                 p={1}
               >
                 <Stack direction="row" spacing={1} alignItems="center">
-                  <Tooltip title={isPlaying ? "Stop Stream" : "Start Stream"}>
-                    <IconButton onClick={togglePlayPause} size="small">
-                      {isPlaying ? (
-                        <Pause fontSize="inherit" />
-                      ) : (
-                        <PlayArrow fontSize="inherit" />
-                      )}
+                  <Tooltip title="Refresh Stream">
+                    <IconButton onClick={refreshStream} size="small">
+                      <Refresh fontSize="inherit" />
                     </IconButton>
                   </Tooltip>
                 </Stack>
@@ -379,6 +332,32 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
                     </IconButton>
                   </Tooltip>
                 </Stack>
+              </Stack>
+            </Box>
+          )}
+
+          {/* Always show fullscreen and camera controls when stream is working */}
+          {controls && streamURL && !error && (
+            <Box position="absolute" bottom={0} right={0}>
+              <Stack direction="row" spacing={1} p={1}>
+                {onCameraOverlay && (
+                  <Tooltip title="Camera Controls">
+                    <IconButton onClick={onCameraOverlay} size="small">
+                      <CameraAlt fontSize="inherit" />
+                    </IconButton>
+                  </Tooltip>
+                )}
+                <Tooltip
+                  title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                >
+                  <IconButton onClick={toggleFullscreen} size="small">
+                    {isFullscreen ? (
+                      <FullscreenExit fontSize="inherit" />
+                    ) : (
+                      <Fullscreen fontSize="inherit" />
+                    )}
+                  </IconButton>
+                </Tooltip>
               </Stack>
             </Box>
           )}

@@ -33,7 +33,7 @@
   },
   "scripts": {
     "start": "craco start",
-    "dev": "PORT=3002 REACT_APP_API_BASE_URL=http://localhost:5001 craco start",
+    "dev": "craco start",
     "build": "craco build",
     "test": "craco test",
     "eject": "react-scripts eject"

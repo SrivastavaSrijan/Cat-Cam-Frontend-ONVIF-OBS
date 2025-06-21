@@ -2,13 +2,12 @@ import { useCallback, useEffect } from "react";
 import { useApi } from "./useApi";
 import { useNotification } from "./useNotification";
 import { useAppContext } from "../contexts/AppContext";
+import { MJPEG_BASE_URL, MJPEG_ENDPOINTS } from "../config";
 
 interface MjpegStreamStatus {
-  running: boolean;
-  port?: number;
-  url?: string;
-  pid?: number;
-  managed_process?: boolean;
+  active: boolean;
+  camera_type?: string;
+  clients?: number;
 }
 
 export const useMjpegStream = () => {
@@ -20,25 +19,27 @@ export const useMjpegStream = () => {
     setIsStreamLoading,
     setIsStreaming,
     setStreamURL,
-    setMjpegLogs,
   } = useAppContext();
 
   // Check stream status
   const checkStatus = useCallback(async () => {
     try {
       const response = (await api.getMjpegStreamStatus()) as MjpegStreamStatus;
-      setIsStreaming(response.running);
-      const responseURL =
-        process.env.NODE_ENV === "development"
-          ? process.env.REACT_APP_MJPEG_STREAM_URL
-          : response.url;
-      setStreamURL(response.running ? responseURL || null : null);
+      setIsStreaming(response.active);
+
+      // Generate stream URL - always use the direct microservice endpoint
+      const streamURL = response.active
+        ? `${MJPEG_BASE_URL}${MJPEG_ENDPOINTS.STREAM}`
+        : null;
+
+      setStreamURL(streamURL);
       return response;
     } catch (error) {
       console.error("Failed to check MJPEG stream status:", error);
       setIsStreamLoading(false);
+      setIsStreaming(false);
       setStreamURL(null);
-      return { running: false };
+      return { active: false };
     }
   }, [api, setIsStreamLoading, setIsStreaming, setStreamURL]);
 
@@ -50,16 +51,19 @@ export const useMjpegStream = () => {
     try {
       const response = (await api.startMjpegStream()) as {
         success: string;
-        port: number;
-        url: string;
+        camera_type: string;
       };
 
       // Wait for stream to be ready
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       setIsStreaming(true);
-      setStreamURL(response.url);
-      showNotification(`MJPEG stream started: ${response.url}`, "success");
+      const streamURL = `${MJPEG_BASE_URL}${MJPEG_ENDPOINTS.STREAM}`;
+      setStreamURL(streamURL);
+      showNotification(
+        `MJPEG stream started (${response.camera_type})`,
+        "success"
+      );
 
       // Verify stream is actually accessible after a short delay
       setTimeout(async () => {
@@ -119,22 +123,6 @@ export const useMjpegStream = () => {
     showNotification,
   ]);
 
-  // Fetch logs
-  const fetchLogs = useCallback(async () => {
-    try {
-      const response = (await api.getMjpegStreamLogs()) as { logs: string };
-      setMjpegLogs(response.logs);
-      return response.logs;
-    } catch (error: unknown) {
-      console.error("Failed to fetch MJPEG stream logs:", error);
-      showNotification(
-        error instanceof Error ? error.message : "Failed to fetch stream logs",
-        "error"
-      );
-      return "";
-    }
-  }, [api, setMjpegLogs, showNotification]);
-
   // Toggle stream
   const toggleStream = useCallback(async () => {
     if (isStreaming) {
@@ -143,16 +131,41 @@ export const useMjpegStream = () => {
     return await startStream();
   }, [isStreaming, startStream, stopStream]);
 
-  // Auto-check status on mount
+  // Auto-check status on mount only once
   useEffect(() => {
-    checkStatus();
-  }, [checkStatus]);
+    let mounted = true;
+
+    const initialCheck = async () => {
+      try {
+        const response =
+          (await api.getMjpegStreamStatus()) as MjpegStreamStatus;
+        if (mounted) {
+          setIsStreaming(response.active);
+          const streamURL = response.active
+            ? `${MJPEG_BASE_URL}${MJPEG_ENDPOINTS.STREAM}`
+            : null;
+          setStreamURL(streamURL);
+        }
+      } catch (error) {
+        console.error("Failed to check initial MJPEG stream status:", error);
+        if (mounted) {
+          setIsStreaming(false);
+          setStreamURL(null);
+        }
+      }
+    };
+
+    initialCheck();
+
+    return () => {
+      mounted = false;
+    };
+  }, [api, setIsStreaming, setStreamURL]); // Add dependencies but it should only run once because these are stable
 
   return {
     startStream,
     stopStream,
     toggleStream,
     checkStatus,
-    fetchLogs,
   };
 };

@@ -66,7 +66,6 @@ export const useAppData = () => {
   const [streamURL, setStreamURL] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isStreamLoading, setIsStreamLoading] = useState(false);
-  const [mjpegLogs, setMjpegLogs] = useState<string>("");
 
   const { loading, withLoading } = useLoading();
   const { showError, showSuccess } = useNotification();
@@ -397,8 +396,6 @@ export const useAppData = () => {
       setIsStreaming,
       isStreamLoading,
       setIsStreamLoading,
-      mjpegLogs,
-      setMjpegLogs,
       streamPlayerRef,
     }),
     [
@@ -423,7 +420,6 @@ export const useAppData = () => {
       streamURL,
       isStreaming,
       isStreamLoading,
-      mjpegLogs,
     ]
   );
 };

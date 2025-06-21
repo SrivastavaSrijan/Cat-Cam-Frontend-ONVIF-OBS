@@ -1,11 +1,5 @@
 import type React from "react";
-import {
-  Stack,
-  IconButton,
-  Typography,
-  Card,
-  CardContent,
-} from "@mui/material";
+import { Stack, IconButton, Card, CardContent } from "@mui/material";
 import {
   ArrowBack,
   ArrowDownward,

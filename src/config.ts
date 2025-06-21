@@ -2,6 +2,9 @@ export const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL ||
   "https://ssvcam.srijansrivastava.com/api";
 
+export const MJPEG_BASE_URL =
+  process.env.REACT_APP_MJPEG_BASE_URL || "https://ssvcam.srijansrivastava.com";
+
 export const WEBSOCKET_URL = API_BASE_URL.replace(/:\d+$/, ":3333").replace(
   "http",
   "ws"
@@ -42,8 +45,9 @@ export const OBS_ENDPOINTS = {
 } as const;
 
 export const MJPEG_ENDPOINTS = {
-  START: "/start_mjpeg_stream",
-  STOP: "/stop_mjpeg_stream",
-  STATUS: "/mjpeg_stream_status",
-  LOGS: "/fetch_mjpeg_logs",
+  HEALTH: "/health",
+  STATUS: "/status",
+  START: "/start",
+  STOP: "/stop",
+  STREAM: "/stream",
 } as const;

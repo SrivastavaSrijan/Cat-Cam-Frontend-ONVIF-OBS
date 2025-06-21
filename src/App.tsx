@@ -76,6 +76,10 @@ const App: React.FC = () => {
               height={200}
               autoPlay={true}
               controls={true}
+              onCameraOverlay={() => setCameraOverlayOpen(true)}
+              overlayOpen={cameraOverlayOpen}
+              onOverlayClose={() => setCameraOverlayOpen(false)}
+              OverlayComponent={CameraOverlay}
             />
             <Card>
               <CardContent>
@@ -132,11 +136,6 @@ const App: React.FC = () => {
             </Container>
 
             <Fabs onCameraOverlayOpen={() => setCameraOverlayOpen(true)} />
-            {/* Camera Control Overlay */}
-            <CameraOverlay
-              open={cameraOverlayOpen}
-              onClose={() => setCameraOverlayOpen(false)}
-            />
 
             {/* PWA Install Prompt */}
             <InstallPrompt />

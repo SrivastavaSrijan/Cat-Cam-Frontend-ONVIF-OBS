@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { fetchWrapper, type FetchOptions } from "../utils/fetch";
 import {
   API_BASE_URL,
+  MJPEG_BASE_URL,
   CAMERA_ENDPOINTS,
   OBS_ENDPOINTS,
   MJPEG_ENDPOINTS,
@@ -158,25 +159,46 @@ export const useApi = () => {
     [apiCall]
   );
 
-  // MJPEG Stream operations
+  // MJPEG Stream operations (using separate microservice)
+  const mjpegApiCall = useCallback(
+    async <T>(
+      endpoint: string,
+      method: "GET" | "POST" = "GET",
+      body?: unknown,
+      options?: FetchOptions
+    ): Promise<T> => {
+      return new Promise((resolve, reject) => {
+        fetchWrapper(
+          `${MJPEG_BASE_URL}${endpoint}`,
+          method,
+          body,
+          (data: T) => resolve(data),
+          (error) => reject(error),
+          options
+        );
+      });
+    },
+    []
+  );
+
+  const checkMjpegHealth = useCallback(
+    () => mjpegApiCall(MJPEG_ENDPOINTS.HEALTH),
+    [mjpegApiCall]
+  );
+
   const startMjpegStream = useCallback(
-    () => apiCall(MJPEG_ENDPOINTS.START, "POST"),
-    [apiCall]
+    () => mjpegApiCall(MJPEG_ENDPOINTS.START, "POST"),
+    [mjpegApiCall]
   );
 
   const stopMjpegStream = useCallback(
-    () => apiCall(MJPEG_ENDPOINTS.STOP, "POST"),
-    [apiCall]
+    () => mjpegApiCall(MJPEG_ENDPOINTS.STOP, "POST"),
+    [mjpegApiCall]
   );
 
   const getMjpegStreamStatus = useCallback(
-    () => apiCall(MJPEG_ENDPOINTS.STATUS),
-    [apiCall]
-  );
-
-  const getMjpegStreamLogs = useCallback(
-    () => apiCall(MJPEG_ENDPOINTS.LOGS),
-    [apiCall]
+    () => mjpegApiCall(MJPEG_ENDPOINTS.STATUS),
+    [mjpegApiCall]
   );
 
   return {
@@ -201,10 +223,10 @@ export const useApi = () => {
     checkVirtualCameraStatus,
     startProjector,
     closeProjector,
-    // MJPEG Stream operations
+    // MJPEG Stream operations (new microservice)
+    checkMjpegHealth,
     startMjpegStream,
     stopMjpegStream,
     getMjpegStreamStatus,
-    getMjpegStreamLogs,
   };
 };
