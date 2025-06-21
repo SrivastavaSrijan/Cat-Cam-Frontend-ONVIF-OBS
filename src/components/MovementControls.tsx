@@ -13,11 +13,11 @@ import {
   ArrowUpward,
   Home,
 } from "@mui/icons-material";
-import { useCameraDataManagerContext } from "../contexts/CameraDataManagerContext";
+import { useAppContext } from "../contexts/AppContext";
 import { useAutoDismissError, useCameraControl } from "../hooks";
 
 const MovementControls: React.FC = () => {
-  const { selectedCamera } = useCameraDataManagerContext();
+  const { selectedCamera } = useAppContext();
   const { setError } = useAutoDismissError();
   const { loading, moveCamera } = useCameraControl(selectedCamera);
 
@@ -35,9 +35,6 @@ const MovementControls: React.FC = () => {
   return (
     <Card>
       <CardContent>
-        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-          Camera Controls
-        </Typography>
         <Stack spacing={1} alignItems="center">
           {/* Up arrow */}
           <IconButton

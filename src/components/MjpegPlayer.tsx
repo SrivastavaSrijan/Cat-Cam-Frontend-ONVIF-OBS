@@ -14,9 +14,10 @@ import {
   Fullscreen,
   FullscreenExit,
   Refresh,
+  CameraAlt,
 } from "@mui/icons-material";
-import StreamControls from "./StreamControls";
 import { useMjpegStream } from "../hooks";
+import { useAppContext } from "../contexts/AppContext";
 
 interface MjpegPlayerProps {
   title?: string;
@@ -24,7 +25,7 @@ interface MjpegPlayerProps {
   height?: number | string;
   autoPlay?: boolean;
   controls?: boolean;
-  className?: string;
+  onCameraOverlay?: () => void;
 }
 // Base64 placeholder image (simple camera icon)
 const placeholderImage =
@@ -36,22 +37,21 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
   height = 500,
   autoPlay = true,
   controls = true,
-  className = "",
+  onCameraOverlay,
 }) => {
-  const imgRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const loadingTimeoutRef = useRef<NodeJS.Timeout>();
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [streamSrc, setStreamSrc] = useState<string>("");
 
   // Use MJPEG stream hook
-  const { isStreaming, streamUrl } = useMjpegStream();
+  const { streamURL, streamPlayerRef, isStreaming } = useAppContext();
+  const { stopStream, startStream } = useMjpegStream();
 
-  const startStream = useCallback(() => {
-    if (!streamUrl) {
+  const handleStartStream = useCallback(() => {
+    if (!streamURL) {
       setError("No stream URL available");
       setIsLoading(false);
       return;
@@ -62,12 +62,6 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
       clearTimeout(loadingTimeoutRef.current);
     }
 
-    // Add cache-busting parameters and headers to prevent any caching
-    const cacheBustingUrl = `${streamUrl}${
-      streamUrl.includes("?") ? "&" : "?"
-    }t=${Date.now()}&nocache=${Math.random()}`;
-
-    setStreamSrc(cacheBustingUrl);
     setIsPlaying(true);
     setError(null);
     setIsLoading(true);
@@ -75,45 +69,34 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
     // Set a timeout to handle stuck loading
     loadingTimeoutRef.current = setTimeout(() => {
       setIsLoading(false);
-      setError(`Stream loading timeout. URL: ${streamUrl}`);
+      setError(`Stream loading timeout. URL: ${streamURL}`);
     }, 8000);
-  }, [streamUrl]);
+  }, [streamURL]);
 
   // Handle stream status changes
   useEffect(() => {
-    if (isStreaming && streamUrl && isPlaying) {
+    if (isStreaming && streamURL && isPlaying) {
       // Stream is available and we want to play
-      startStream();
+      handleStartStream();
     } else if (!isStreaming) {
       // Stream stopped, show placeholder
-      setStreamSrc(placeholderImage);
       setError("Stream is not running");
       setIsLoading(false);
     }
-  }, [isStreaming, streamUrl, isPlaying, startStream]);
+  }, [isStreaming, streamURL, isPlaying, handleStartStream]);
 
   // Auto-start when stream becomes available
   useEffect(() => {
-    if (autoPlay && isStreaming && streamUrl) {
+    if (autoPlay && isStreaming && streamURL) {
       setIsPlaying(true);
-      startStream();
+      handleStartStream();
     }
-  }, [autoPlay, isStreaming, streamUrl, startStream]);
-
-  const stopStream = () => {
-    if (loadingTimeoutRef.current) {
-      clearTimeout(loadingTimeoutRef.current);
-    }
-    setStreamSrc(placeholderImage);
-    setIsPlaying(false);
-    setIsLoading(false);
-    setError(null);
-  };
+  }, [autoPlay, isStreaming, streamURL, handleStartStream]);
 
   const togglePlayPause = () => {
     if (isPlaying) {
       stopStream();
-    } else if (isStreaming && streamUrl) {
+    } else if (isStreaming && streamURL) {
       startStream();
     } else {
       setError("Stream is not available");
@@ -121,12 +104,12 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
   };
 
   const refreshStream = () => {
-    if (isStreaming && streamUrl) {
+    if (isStreaming && streamURL) {
       // Force stop current stream
       stopStream();
       // Clear the image source completely to force reload
-      if (imgRef.current) {
-        imgRef.current.src = placeholderImage;
+      if (streamPlayerRef.current) {
+        streamPlayerRef.current.src = placeholderImage;
       }
       // Wait a bit longer and then restart with fresh cache-busting URL
       setTimeout(() => {
@@ -140,42 +123,82 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
 
     try {
       if (!isFullscreen) {
+        // Entering fullscreen
         if (containerRef.current.requestFullscreen) {
           await containerRef.current.requestFullscreen();
-          // Force landscape orientation on mobile
-          // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-          if ((window.screen.orientation as any)?.lock) {
-            try {
-              // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-              await (window.screen.orientation as any).lock("landscape");
-            } catch (orientationError) {
-              console.log(
-                "Orientation lock not supported or failed:",
-                orientationError
-              );
-            }
+        }
+        // Try to lock orientation to landscape on mobile (optional)
+        // @ts-ignore - orientation lock API not fully supported in TypeScript
+        if (window.screen?.orientation?.lock) {
+          try {
+            // @ts-ignore - orientation lock API not fully supported in TypeScript
+            await window.screen.orientation.lock("landscape");
+          } catch (orientationError) {
+            console.log(
+              "Orientation lock not supported or failed:",
+              orientationError
+            );
+            // Don't treat this as an error - orientation lock is optional
           }
         }
       } else {
+        // Exiting fullscreen
         if (document.exitFullscreen) {
           await document.exitFullscreen();
-          // Unlock orientation when exiting fullscreen
-          // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-          if ((window.screen.orientation as any)?.unlock) {
-            try {
-              window.screen.orientation.unlock();
-            } catch (orientationError) {
-              console.log("Orientation unlock failed:", orientationError);
-            }
+        }
+        // Unlock orientation when exiting fullscreen
+        // @ts-ignore - orientation lock API not fully supported in TypeScript
+        if (window.screen?.orientation?.unlock) {
+          try {
+            window.screen.orientation.unlock();
+          } catch (orientationError) {
+            console.log("Orientation unlock failed:", orientationError);
+            // Don't treat this as an error
           }
         }
       }
     } catch (err) {
       console.error("Fullscreen error:", err);
-      // Force update fullscreen state in case of error
-      setIsFullscreen(false);
+      // Don't force update the state here - let the event listener handle it
     }
   };
+
+  // Listen for fullscreen changes to update state properly
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = Boolean(
+        document.fullscreenElement ||
+          // @ts-ignore - for webkit browsers
+          document.webkitFullscreenElement ||
+          // @ts-ignore - for mozilla browsers
+          document.mozFullScreenElement ||
+          // @ts-ignore - for IE/Edge
+          document.msFullscreenElement
+      );
+      setIsFullscreen(isCurrentlyFullscreen);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("mozfullscreenchange", handleFullscreenChange);
+    document.addEventListener("MSFullscreenChange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        handleFullscreenChange
+      );
+      document.removeEventListener(
+        "mozfullscreenchange",
+        handleFullscreenChange
+      );
+      document.removeEventListener(
+        "MSFullscreenChange",
+        handleFullscreenChange
+      );
+    };
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -189,7 +212,6 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
   return (
     <Stack spacing={2}>
       {/* Stream Controls */}
-      <StreamControls onRefresh={refreshStream} />
 
       {/* Stream Player */}
       <Paper elevation={2}>
@@ -201,8 +223,8 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
           bgcolor="black"
         >
           <img
-            ref={imgRef}
-            src={streamSrc || placeholderImage}
+            ref={streamPlayerRef}
+            src={streamURL || placeholderImage}
             alt={title}
             style={{
               width: "100%",
@@ -220,7 +242,7 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
                 clearTimeout(loadingTimeoutRef.current);
               }
               // Only clear loading if it's not the placeholder image
-              if (streamSrc !== placeholderImage && streamSrc) {
+              if (streamURL !== placeholderImage && streamURL) {
                 setIsLoading(false);
                 setError(null);
               }
@@ -230,16 +252,15 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
                 clearTimeout(loadingTimeoutRef.current);
               }
               setIsLoading(false);
-              if (streamSrc !== placeholderImage && streamSrc) {
-                setError(`Failed to load MJPEG stream from: ${streamSrc}`);
-                // Fall back to placeholder image
-                setStreamSrc(placeholderImage);
+              if (streamURL !== placeholderImage && streamURL) {
+                setError(`Failed to load MJPEG stream from: ${streamURL}`);
+                // Don't automatically fall back to placeholder - let the user retry
               }
               console.error("Stream error:", e);
             }}
           />
 
-          {isLoading && streamSrc && streamSrc !== placeholderImage && (
+          {isLoading && streamURL && streamURL !== placeholderImage && (
             <Box
               position="absolute"
               top={0}
@@ -260,7 +281,7 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
                   color="white"
                   sx={{ opacity: 0.7 }}
                 >
-                  {streamSrc}
+                  {streamURL}
                 </Typography>
               </Stack>
             </Box>
@@ -317,7 +338,7 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
             </Box>
           )}
 
-          {controls && !isFullscreen && (
+          {controls && (
             <Box position="absolute" bottom={0} left={0} right={0}>
               <Stack
                 direction="row"
@@ -339,6 +360,13 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
                 </Stack>
 
                 <Stack direction="row" spacing={1}>
+                  {onCameraOverlay && (
+                    <Tooltip title="Camera Controls">
+                      <IconButton onClick={onCameraOverlay} size="small">
+                        <CameraAlt fontSize="inherit" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
                   <Tooltip
                     title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                   >

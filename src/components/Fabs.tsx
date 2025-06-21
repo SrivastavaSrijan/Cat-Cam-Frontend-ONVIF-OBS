@@ -93,7 +93,7 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
           <ListItemIcon>
             <Restore fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="Refresh RTSP Streams" />
+          <ListItemText primary="Refresh" />
         </MenuItem>
         <MenuItem
           onClick={() => {
@@ -105,7 +105,7 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
           <ListItemIcon>
             <Cable fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="Reconnect to OBS" />
+          <ListItemText primary="Reconnect" />
         </MenuItem>
       </Menu>
     </>

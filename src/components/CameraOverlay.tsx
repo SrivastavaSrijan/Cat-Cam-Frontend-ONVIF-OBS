@@ -1,4 +1,5 @@
 import type React from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -28,12 +29,68 @@ import {
 } from "@mui/icons-material";
 import { useCameraOverlay } from "../hooks";
 
+// Add orientation detection hook
+const useOrientation = (
+  forcedOrientation?: "portrait" | "landscape" | "auto"
+) => {
+  const [orientation, setOrientation] = useState<"portrait" | "landscape">(
+    "portrait"
+  );
+
+  useEffect(() => {
+    if (forcedOrientation && forcedOrientation !== "auto") {
+      setOrientation(forcedOrientation);
+      return;
+    }
+
+    const handleOrientationChange = () => {
+      // Check both window dimensions and screen.orientation API
+      const isLandscape = window.innerWidth > window.innerHeight;
+
+      // @ts-ignore - orientation API not fully supported in TypeScript
+      const screenOrientation = window.screen?.orientation?.type;
+      const isScreenLandscape = screenOrientation?.includes("landscape");
+
+      // Use screen orientation API if available, otherwise fall back to dimensions
+      const finalOrientation =
+        isScreenLandscape !== undefined
+          ? isScreenLandscape
+            ? "landscape"
+            : "portrait"
+          : isLandscape
+          ? "landscape"
+          : "portrait";
+
+      setOrientation(finalOrientation);
+    };
+
+    // Initial check
+    handleOrientationChange();
+
+    // Listen for orientation changes
+    window.addEventListener("orientationchange", handleOrientationChange);
+    window.addEventListener("resize", handleOrientationChange);
+
+    return () => {
+      window.removeEventListener("orientationchange", handleOrientationChange);
+      window.removeEventListener("resize", handleOrientationChange);
+    };
+  }, [forcedOrientation]);
+
+  return orientation;
+};
+
 interface CameraOverlayProps {
   open: boolean;
   onClose: () => void;
+  orientation?: "portrait" | "landscape" | "auto";
 }
 
-const CameraOverlay: React.FC<CameraOverlayProps> = ({ open, onClose }) => {
+const CameraOverlay: React.FC<CameraOverlayProps> = ({
+  open,
+  onClose,
+  orientation = "auto",
+}) => {
   const {
     cameraMode,
     setCameraMode,
@@ -54,6 +111,12 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ open, onClose }) => {
 
   const presetSlots = getPresetSlots();
   const cameraSlots = getCameraSlots();
+
+  // Use the orientation hook
+  const currentOrientation = useOrientation(orientation);
+
+  // Adjust layout based on orientation
+  const isLandscape = currentOrientation === "landscape";
 
   return (
     <Dialog
@@ -223,6 +286,9 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({ open, onClose }) => {
           height="calc(100vh - 48px)" // Adjust for header and footer
           position="relative"
           justifyContent="center"
+          direction={isLandscape ? "row" : "column"}
+          alignItems="center"
+          spacing={isLandscape ? 4 : 2}
         >
           <Box
             display="flex"

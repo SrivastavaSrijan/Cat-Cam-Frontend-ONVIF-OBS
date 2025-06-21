@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { useSwipeable } from "react-swipeable";
 import { useCameraControl } from "./useCameraControl";
-import { useCameraDataManagerContext } from "../contexts/CameraDataManagerContext";
+import { useAppContext } from "../contexts/AppContext";
 import { useOBSControl } from "./useOBSControl";
 import { CAMERA_PRESETS } from "../utils/contants";
 
@@ -15,7 +15,7 @@ export const useCameraOverlay = (open: boolean) => {
     selectCamera,
     loadCameraList,
     isLoadingCameras,
-  } = useCameraDataManagerContext();
+  } = useAppContext();
   const { switchStreamView } = useOBSControl();
 
   // Initialize overlay camera - use selected camera or first available

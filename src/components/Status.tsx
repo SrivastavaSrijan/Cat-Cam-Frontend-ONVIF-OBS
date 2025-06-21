@@ -13,7 +13,7 @@ import {
   Divider,
 } from "@mui/material";
 import { Refresh, Videocam, VideocamOff } from "@mui/icons-material";
-import { useCameraDataManagerContext } from "../contexts/CameraDataManagerContext";
+import { useAppContext } from "../contexts/AppContext";
 import { useAutoDismissError } from "../hooks";
 
 const Status: React.FC = () => {
@@ -25,7 +25,7 @@ const Status: React.FC = () => {
     getCameraData,
     loadCameraList,
     loadCameraData,
-  } = useCameraDataManagerContext();
+  } = useAppContext();
   const { error, setError } = useAutoDismissError();
 
   // Get current camera data

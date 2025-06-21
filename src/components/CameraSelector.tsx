@@ -8,20 +8,17 @@ import {
   Card,
   CardContent,
 } from "@mui/material";
-import { Circle as CircleIcon } from "@mui/icons-material";
-import { useCameraDataManagerContext } from "../contexts/CameraDataManagerContext";
+import { useAppContext } from "../contexts/AppContext";
 import { useOBSControl } from "../hooks";
 
 const CameraSelector: React.FC = () => {
   const {
     selectedCamera,
     allCameras,
-    onlineCameraCount,
-    totalCameraCount,
     selectCamera,
     loadCameraList,
     isLoadingCameras,
-  } = useCameraDataManagerContext();
+  } = useAppContext();
 
   const { switchStreamView } = useOBSControl();
 
@@ -43,25 +40,6 @@ const CameraSelector: React.FC = () => {
     <Card>
       <CardContent>
         <Stack spacing={2}>
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-          >
-            <Typography variant="subtitle2" color="text.secondary">
-              Select Camera
-            </Typography>
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <CircleIcon
-                fontSize="small"
-                color={onlineCameraCount > 0 ? "success" : "error"}
-              />
-              <Typography variant="caption" color="text.secondary">
-                {onlineCameraCount}/{totalCameraCount} online
-              </Typography>
-            </Stack>
-          </Stack>
-
           <FormControl fullWidth>
             <Select
               size="small"

@@ -7,6 +7,8 @@ import {
   Typography,
   Stack,
   useMediaQuery,
+  Card,
+  CardContent,
 } from "@mui/material";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import darkTheme from "./theme";
@@ -21,8 +23,9 @@ import {
   MjpegPlayer,
   InstallPrompt,
   Fabs,
+  StreamControls,
 } from "./components";
-import { CameraDataManagerProvider } from "./contexts/CameraDataManagerContext";
+import { AppProvider } from "./contexts/AppContext";
 import { NotificationProvider } from "./contexts";
 import MovementControls from "./components/MovementControls";
 
@@ -74,7 +77,20 @@ const App: React.FC = () => {
               autoPlay={true}
               controls={true}
             />
-            <ActionBar />
+            <Card>
+              <CardContent>
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  alignItems="center"
+                  justifyContent="space-between"
+                >
+                  <StreamControls />
+                  <Box flexGrow={1} />
+                  <ActionBar />
+                </Stack>
+              </CardContent>
+            </Card>
             <MovementControls />
           </Stack>
         );
@@ -105,7 +121,7 @@ const App: React.FC = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <NotificationProvider>
-        <CameraDataManagerProvider>
+        <AppProvider>
           <div className="App">
             <Navbar value={value} handleChange={handleChange} />
 
@@ -125,7 +141,7 @@ const App: React.FC = () => {
             {/* PWA Install Prompt */}
             <InstallPrompt />
           </div>
-        </CameraDataManagerProvider>
+        </AppProvider>
       </NotificationProvider>
     </ThemeProvider>
   );

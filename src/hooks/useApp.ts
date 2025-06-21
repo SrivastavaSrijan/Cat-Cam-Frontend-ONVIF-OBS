@@ -48,7 +48,7 @@ export type StreamView = {
   highlighted_source?: string;
 };
 
-export const useCameraDataManager = () => {
+export const useAppData = () => {
   const [cameraData, setCameraData] = useState<Record<string, CameraData>>({});
   const [isContinuousMoving, setIsContinuousMoving] = useState<
     Record<string, boolean>
@@ -62,6 +62,12 @@ export const useCameraDataManager = () => {
     undefined
   );
 
+  // MJPEG Stream state - centralized here
+  const [streamURL, setStreamURL] = useState<string | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [isStreamLoading, setIsStreamLoading] = useState(false);
+  const [mjpegLogs, setMjpegLogs] = useState<string>("");
+
   const { loading, withLoading } = useLoading();
   const { showError, showSuccess } = useNotification();
   const api = useApi();
@@ -69,6 +75,7 @@ export const useCameraDataManager = () => {
   const loadingRef = useRef<Set<string>>(new Set());
   const callbacksRef = useRef<Record<string, Set<CameraDataCallback>>>({});
   const cameraListLoadingRef = useRef(false);
+  const streamPlayerRef = useRef<HTMLImageElement>(null);
 
   const subscribeToCamera = useCallback(
     (nickname: string, callback: CameraDataCallback) => {
@@ -382,6 +389,17 @@ export const useCameraDataManager = () => {
       // OBS control
       streamView,
       selectStreamView,
+
+      // MJPEG Stream management
+      streamURL,
+      setStreamURL,
+      isStreaming,
+      setIsStreaming,
+      isStreamLoading,
+      setIsStreamLoading,
+      mjpegLogs,
+      setMjpegLogs,
+      streamPlayerRef,
     }),
     [
       subscribeToCamera,
@@ -402,6 +420,10 @@ export const useCameraDataManager = () => {
       selectCamera,
       streamView,
       selectStreamView,
+      streamURL,
+      isStreaming,
+      isStreamLoading,
+      mjpegLogs,
     ]
   );
 };

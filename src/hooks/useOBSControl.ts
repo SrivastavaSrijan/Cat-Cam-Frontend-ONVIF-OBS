@@ -2,8 +2,8 @@ import { useState, useCallback } from "react";
 import { useApi } from "./useApi";
 import { useNotification } from "./useNotification";
 import { useLoading } from "./useLoading";
-import { useCameraDataManagerContext } from "../contexts/CameraDataManagerContext";
-import type { StreamView } from "./useCameraDataManager";
+import { useAppContext } from "../contexts/AppContext";
+import type { StreamView } from "./useApp";
 
 export const useOBSControl = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -11,7 +11,7 @@ export const useOBSControl = () => {
   const { showError, showSuccess } = useNotification();
   const api = useApi();
 
-  const { selectStreamView } = useCameraDataManagerContext();
+  const { selectStreamView } = useAppContext();
 
   const switchStreamView = useCallback(
     async (view: StreamView["layout_mode"], activeCamera?: string) => {
@@ -69,7 +69,7 @@ export const useOBSControl = () => {
       // Wait 5 seconds then switch back to Mosaic
       setTimeout(async () => {
         try {
-          await api.obsSwitchScene("grid");
+          await api.obsSwitchScene("Mosaic");
           showSuccess("RTSP streams refreshed successfully");
         } catch (error) {
           showError("Failed to complete stream refresh");

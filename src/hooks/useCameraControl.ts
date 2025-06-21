@@ -1,8 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import {
-  useCameraDataManagerContext,
-  type CameraData,
-} from "../contexts/CameraDataManagerContext";
+import { useAppContext, type CameraData } from "../contexts/AppContext";
 
 interface Preset {
   Name: string;
@@ -51,7 +48,7 @@ export const useCameraControl = (nickname: string | null) => {
     stopContinuousMove: managerStopContinuousMove,
     moveCamera: managerMoveCamera,
     isCameraMoving,
-  } = useCameraDataManagerContext();
+  } = useAppContext();
 
   // Subscribe to camera data when nickname changes
   useEffect(() => {

@@ -1,28 +1,20 @@
 import type React from "react";
 import { useState, useCallback, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  Stack,
-  ToggleButtonGroup,
-  ToggleButton,
-  Switch,
-  Alert,
-  FormControlLabel,
-} from "@mui/material";
+import { ToggleButtonGroup, ToggleButton, Alert } from "@mui/material";
 import {
   GridView,
   CenterFocusStrong,
   NightlightRound,
+  WbSunny,
 } from "@mui/icons-material";
-import { useCameraDataManagerContext } from "../contexts/CameraDataManagerContext";
+import { useAppContext } from "../contexts/AppContext";
 import { useApi, useOBSControl, useAutoDismissError } from "../hooks";
 
 const ActionBar: React.FC = () => {
   const [nightMode, setNightMode] = useState<boolean | undefined>(undefined);
   const [nightModeLoading, setNightModeLoading] = useState(false);
 
-  const { selectedCamera, streamView } = useCameraDataManagerContext();
+  const { selectedCamera, streamView } = useAppContext();
   const { error, setError } = useAutoDismissError();
   const { switchStreamView } = useOBSControl();
   const api = useApi();
@@ -71,64 +63,54 @@ const ActionBar: React.FC = () => {
   }, [selectedCamera, checkNightMode, nightMode]);
 
   return (
-    <Card>
-      <CardContent>
-        <Stack spacing={2}>
-          {error && (
-            <Alert severity="error" onClose={() => setError(null)}>
-              {error}
-            </Alert>
-          )}
+    <>
+      {error && (
+        <Alert severity="error" onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
 
-          {/* Stream View Toggle */}
-          <Stack
-            spacing={1}
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-          >
-            <ToggleButtonGroup
-              value={streamView?.layout_mode || "grid"}
-              exclusive
-              onChange={(_, newView) => {
-                if (newView) {
-                  switchStreamView(newView, selectedCamera || undefined);
-                }
-              }}
-              size="medium"
-            >
-              <ToggleButton value="grid">
-                <GridView fontSize="inherit" />
-              </ToggleButton>
-              <ToggleButton value="highlight">
-                <CenterFocusStrong fontSize="inherit" />
-              </ToggleButton>
-            </ToggleButtonGroup>
+      {/* Stream View Toggle */}
 
-            {/* Night Mode Toggle */}
-            {selectedCamera && (
-              <Stack spacing={1}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={nightMode}
-                      onChange={handleNightModeToggle}
-                      disabled={nightModeLoading}
-                      size="small"
-                    />
-                  }
-                  label={
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      <NightlightRound fontSize="inherit" />
-                    </Stack>
-                  }
-                />
-              </Stack>
-            )}
-          </Stack>
-        </Stack>
-      </CardContent>
-    </Card>
+      <ToggleButtonGroup
+        value={streamView?.layout_mode || "grid"}
+        exclusive
+        onChange={(_, newView) => {
+          if (newView) {
+            switchStreamView(newView, selectedCamera || undefined);
+          }
+        }}
+        size="small"
+      >
+        <ToggleButton value="grid">
+          <GridView fontSize="inherit" />
+        </ToggleButton>
+        <ToggleButton value="highlight">
+          <CenterFocusStrong fontSize="inherit" />
+        </ToggleButton>
+      </ToggleButtonGroup>
+
+      {/* Night Mode Toggle */}
+      {selectedCamera && (
+        <ToggleButtonGroup
+          value={nightMode ? "dark" : "bright"}
+          exclusive
+          onChange={(_, newMode) => {
+            if (newMode && !nightModeLoading) {
+              handleNightModeToggle();
+            }
+          }}
+          size="small"
+        >
+          <ToggleButton value="bright" disabled={nightModeLoading}>
+            <WbSunny fontSize="inherit" />
+          </ToggleButton>
+          <ToggleButton value="dark" disabled={nightModeLoading}>
+            <NightlightRound fontSize="inherit" />
+          </ToggleButton>
+        </ToggleButtonGroup>
+      )}
+    </>
   );
 };
 

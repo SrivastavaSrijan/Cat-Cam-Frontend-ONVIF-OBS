@@ -3,21 +3,20 @@ import {
   Typography,
   Alert,
   Stack,
-  IconButton,
   ToggleButtonGroup,
   ToggleButton,
   Card,
   CardContent,
 } from "@mui/material";
-import { Refresh, Videocam } from "@mui/icons-material";
-import { useCameraDataManagerContext } from "../contexts/CameraDataManagerContext";
+import { Videocam } from "@mui/icons-material";
+import { useAppContext } from "../contexts/AppContext";
 import { useCameraControl, useAutoDismissError } from "../hooks";
 import { CAMERA_PRESETS } from "../utils/contants";
 
 const CameraControl: React.FC = () => {
-  const { selectedCamera } = useCameraDataManagerContext();
+  const { selectedCamera } = useAppContext();
   const { error, setError } = useAutoDismissError();
-  const { presets, selectedPreset, loading, gotoPreset, refresh } =
+  const { presets, selectedPreset, loading, gotoPreset } =
     useCameraControl(selectedCamera);
 
   if (!selectedCamera) {
@@ -47,20 +46,6 @@ const CameraControl: React.FC = () => {
       <Card>
         <CardContent>
           <Stack gap={2}>
-            <Stack
-              direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-              spacing={1}
-            >
-              <Typography variant="subtitle2" color="text.secondary">
-                Presets
-              </Typography>
-              <IconButton onClick={refresh} disabled={loading} size="small">
-                <Refresh fontSize="inherit" />
-              </IconButton>
-            </Stack>
-
             {presets.length > 0 ? (
               <ToggleButtonGroup
                 exclusive
