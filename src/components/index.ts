@@ -11,3 +11,4 @@ export { default as Status } from "./Status";
 export { default as StreamControls } from "./StreamControls";
 export { default as Fabs } from "./Fabs";
 export { default as SkeletonLoader } from "./SkeletonLoader";
+export { MovementButton } from "./MovementButton";

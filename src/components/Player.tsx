@@ -14,7 +14,7 @@ import {
   Refresh,
   CameraAlt,
 } from "@mui/icons-material";
-import { useMjpegStream } from "../hooks";
+import { useStream } from "../hooks";
 import { useAppContext } from "../contexts/AppContext";
 import SkeletonLoader from "./SkeletonLoader";
 
@@ -59,7 +59,7 @@ const Player: React.FC<PlayerProps> = ({
   // Use MJPEG stream hook
   const { streamURL, setStreamURL, streamPlayerRef, isStreaming } =
     useAppContext();
-  const { stopStream, startStream, getStatus } = useMjpegStream();
+  const { stopStream, startStream, getStatus } = useStream();
 
   // Auto-start stream once when component mounts if autoPlay is enabled
   const [hasAutoStarted, setHasAutoStarted] = useState(false);
@@ -323,11 +323,7 @@ const Player: React.FC<PlayerProps> = ({
                 <Typography variant="body2" color="white" textAlign="center">
                   {error}
                 </Typography>
-                <IconButton
-                  onClick={refreshStream}
-                  size="small"
-                  color="primary"
-                >
+                <IconButton onClick={refreshStream} size="large">
                   <Refresh />
                 </IconButton>
               </Stack>
@@ -345,7 +341,7 @@ const Player: React.FC<PlayerProps> = ({
               >
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Tooltip title="Refresh Stream">
-                    <IconButton onClick={refreshStream} size="small">
+                    <IconButton onClick={refreshStream} size="large">
                       <Refresh />
                     </IconButton>
                   </Tooltip>
@@ -354,7 +350,7 @@ const Player: React.FC<PlayerProps> = ({
                 <Stack direction="row" spacing={1}>
                   {onCameraOverlay && streamURL && isFullscreen && (
                     <Tooltip title="Camera Controls">
-                      <IconButton onClick={onCameraOverlay} size="small">
+                      <IconButton onClick={onCameraOverlay} size="large">
                         <CameraAlt />
                       </IconButton>
                     </Tooltip>
@@ -363,7 +359,7 @@ const Player: React.FC<PlayerProps> = ({
                     <Tooltip
                       title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                     >
-                      <IconButton onClick={toggleFullscreen} size="small">
+                      <IconButton onClick={toggleFullscreen} size="large">
                         {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
                       </IconButton>
                     </Tooltip>
@@ -379,7 +375,7 @@ const Player: React.FC<PlayerProps> = ({
               <Stack direction="row" spacing={1} p={1}>
                 {onCameraOverlay && isFullscreen && (
                   <Tooltip title="Camera Controls">
-                    <IconButton onClick={onCameraOverlay} size="small">
+                    <IconButton onClick={onCameraOverlay} size="large">
                       <CameraAlt />
                     </IconButton>
                   </Tooltip>
@@ -387,7 +383,7 @@ const Player: React.FC<PlayerProps> = ({
                 <Tooltip
                   title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                 >
-                  <IconButton onClick={toggleFullscreen} size="small">
+                  <IconButton onClick={toggleFullscreen} size="large">
                     {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
                   </IconButton>
                 </Tooltip>

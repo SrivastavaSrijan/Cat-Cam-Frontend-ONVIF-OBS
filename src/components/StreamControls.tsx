@@ -1,12 +1,6 @@
 import type React from "react";
 import { useEffect, useState, useCallback } from "react";
-import {
-  Stack,
-  ToggleButtonGroup,
-  ToggleButton,
-  Box,
-  CircularProgress,
-} from "@mui/material";
+import { Stack, ToggleButtonGroup, ToggleButton, Box } from "@mui/material";
 import {
   Videocam,
   VideocamOff,
@@ -15,6 +9,7 @@ import {
   Close,
 } from "@mui/icons-material";
 import { useOBSControl, useLoading } from "../hooks";
+import SkeletonLoader from "./SkeletonLoader";
 
 interface StreamControlsProps {
   onRefresh?: () => void;
@@ -106,7 +101,9 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
     }
   }, [checkVirtualCameraStatus, virtualCameraStatus]);
 
-  return (
+  return isVirtualCameraLoading ? (
+    <SkeletonLoader variant="stream-controls" />
+  ) : (
     <>
       {/* Virtual Camera Controls */}
       <Stack direction="row" spacing={1} alignItems="center">
@@ -123,13 +120,7 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
               }
             }}
           >
-            {isVirtualCameraLoading ? (
-              <CircularProgress size={18} />
-            ) : virtualCameraStatus === "active" ? (
-              <Videocam />
-            ) : (
-              <VideocamOff />
-            )}
+            {virtualCameraStatus === "active" ? <Videocam /> : <VideocamOff />}
           </ToggleButton>
         </ToggleButtonGroup>
         {/* MJPEG Stream Controls */}

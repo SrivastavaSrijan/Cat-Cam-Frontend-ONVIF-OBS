@@ -36,6 +36,9 @@ const App: React.FC = () => {
     setValue(newValue);
   };
 
+  const disablePlayer =
+    new URLSearchParams(window.location.search).get("disablePlayer") === "true";
+
   const renderTabContent = () => {
     switch (value) {
       case 1:
@@ -43,12 +46,15 @@ const App: React.FC = () => {
           <Stack spacing={3}>
             <CameraSelector />
             <Presets />
-            <PlayerWithController
-              title="SSV Cam"
-              height={200}
-              autoPlay={true}
-              controls={true}
-            />
+            {!disablePlayer && (
+              <PlayerWithController
+                title="Main Cam"
+                height={200}
+                autoPlay={true}
+                controls={true}
+              />
+            )}
+
             <Card>
               <CardContent>
                 <Stack

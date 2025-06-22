@@ -374,20 +374,20 @@ const ControllerOverlay: React.FC<CameraOverlayProps> = ({
       {/* Header Controls */}
       <Stack
         direction="row"
-        justifyContent="space-between"
+        justifyContent="flex-end"
         spacing={1}
         position="absolute"
         alignItems="center"
-        top={10}
+        top={24}
         zIndex={10}
         width="calc(100% - 32px)"
         mx="auto"
       >
         <Stack direction="row" spacing={1}>
-          <IconButton onClick={handleHelpClick} size="small">
+          <IconButton onClick={handleHelpClick} size="large">
             <Info />
           </IconButton>
-          <IconButton onClick={onClose} size="small">
+          <IconButton onClick={onClose} size="large">
             <Close />
           </IconButton>
         </Stack>

@@ -7,28 +7,19 @@ import {
   ArrowUpward,
   Home,
 } from "@mui/icons-material";
-import { useAppContext } from "../contexts/AppContext";
-import { useAutoDismissError } from "../hooks";
-import type { MovementDirection } from "../types/api";
+import { useMovementControls } from "../hooks";
+import { MovementButton } from "./MovementButton";
 import SkeletonLoader from "./SkeletonLoader";
 
 const MovementControls: React.FC = () => {
-  const { selectedCamera, moveCamera, getCameraData } = useAppContext();
-  const { setError } = useAutoDismissError();
-
-  const cameraData = selectedCamera ? getCameraData(selectedCamera) : null;
-  const loading = cameraData?.isLoading || false;
-
-  const handleMove = async (direction: MovementDirection) => {
-    if (!selectedCamera) return;
-
-    try {
-      await moveCamera(selectedCamera, direction);
-    } catch (err) {
-      console.error("Movement error:", err);
-      setError("Failed to move camera.");
-    }
-  };
+  const {
+    selectedCamera,
+    loading,
+    isMoving,
+    handlePressStart,
+    handlePressEnd,
+    swipeHandlers,
+  } = useMovementControls();
 
   return (
     <Card>
@@ -36,31 +27,27 @@ const MovementControls: React.FC = () => {
         {!selectedCamera ? (
           <SkeletonLoader variant="movement-controls" />
         ) : (
-          <Stack spacing={1} alignItems="center">
+          <Stack alignItems="center" {...swipeHandlers}>
             {/* Up arrow */}
-            <IconButton
-              onClick={() => handleMove("up")}
-              color="primary"
-              size="large"
+            <MovementButton
+              direction="up"
+              icon={<ArrowUpward />}
+              onPressStart={handlePressStart}
+              onPressEnd={handlePressEnd}
               disabled={loading}
-            >
-              <Avatar sx={{ bgcolor: "primary.main" }}>
-                <ArrowUpward />
-              </Avatar>
-            </IconButton>
+              isMoving={isMoving}
+            />
 
             {/* Left, Home, Right */}
-            <Stack direction="row" spacing={1} alignItems="center">
-              <IconButton
-                onClick={() => handleMove("left")}
-                color="primary"
-                size="large"
+            <Stack direction="row" alignItems="center">
+              <MovementButton
+                direction="left"
+                icon={<ArrowBack />}
+                onPressStart={handlePressStart}
+                onPressEnd={handlePressEnd}
                 disabled={loading}
-              >
-                <Avatar sx={{ bgcolor: "primary.main" }}>
-                  <ArrowBack />
-                </Avatar>
-              </IconButton>
+                isMoving={isMoving}
+              />
 
               <IconButton size="large" disabled>
                 <Avatar sx={{ bgcolor: "primary.main" }}>
@@ -68,29 +55,25 @@ const MovementControls: React.FC = () => {
                 </Avatar>
               </IconButton>
 
-              <IconButton
-                onClick={() => handleMove("right")}
-                color="primary"
-                size="large"
+              <MovementButton
+                direction="right"
+                icon={<ArrowForward />}
+                onPressStart={handlePressStart}
+                onPressEnd={handlePressEnd}
                 disabled={loading}
-              >
-                <Avatar sx={{ bgcolor: "primary.main" }}>
-                  <ArrowForward />
-                </Avatar>
-              </IconButton>
+                isMoving={isMoving}
+              />
             </Stack>
 
             {/* Down arrow */}
-            <IconButton
-              onClick={() => handleMove("down")}
-              color="primary"
-              size="large"
+            <MovementButton
+              direction="down"
+              icon={<ArrowDownward />}
+              onPressStart={handlePressStart}
+              onPressEnd={handlePressEnd}
               disabled={loading}
-            >
-              <Avatar sx={{ bgcolor: "primary.main" }}>
-                <ArrowDownward />
-              </Avatar>
-            </IconButton>
+              isMoving={isMoving}
+            />
           </Stack>
         )}
       </CardContent>

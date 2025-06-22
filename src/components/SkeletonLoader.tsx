@@ -8,6 +8,7 @@ interface SkeletonLoaderProps {
     | "stream-player"
     | "movement-controls"
     | "camera-overlay"
+    | "stream-controls"
     | "action-bar"
     | "status-card"
     | "camera-list"
@@ -232,6 +233,25 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
             width={32}
             height={32}
             animation="wave"
+          />
+        </Stack>
+      );
+    case "stream-controls":
+      return (
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Skeleton
+            variant="rectangular"
+            width={32}
+            height={32}
+            animation="wave"
+            sx={{ borderRadius: 1 }}
+          />
+          <Skeleton
+            variant="rectangular"
+            width={80}
+            height={32}
+            animation="wave"
+            sx={{ borderRadius: 1 }}
           />
         </Stack>
       );

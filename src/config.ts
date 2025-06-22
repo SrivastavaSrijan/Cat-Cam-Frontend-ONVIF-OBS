@@ -3,7 +3,8 @@ export const API_BASE_URL =
   "https://ssvcam.srijansrivastava.com/api";
 
 export const MJPEG_BASE_URL =
-  process.env.REACT_APP_MJPEG_BASE_URL || "https://ssvcam.srijansrivastava.com";
+  process.env.REACT_APP_MJPEG_BASE_URL ||
+  "https://ssvcam.srijansrivastava.com/stream";
 
 export const WEBSOCKET_URL = API_BASE_URL.replace(/:\d+$/, ":3333").replace(
   "http",
