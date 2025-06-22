@@ -15,6 +15,7 @@ import {
 import { Refresh, Videocam, VideocamOff } from "@mui/icons-material";
 import { useAppContext } from "../contexts/AppContext";
 import { useAutoDismissError } from "../hooks";
+import SkeletonLoader from "./SkeletonLoader";
 
 const Status: React.FC = () => {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
@@ -105,47 +106,51 @@ const Status: React.FC = () => {
       </Card>
 
       {/* Current Camera Status */}
-      {selectedCamera && currentStatus && (
+      {selectedCamera && (
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>
               {selectedCamera} Position
             </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <Stack spacing={1}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Pan
-                  </Typography>
-                  <Typography variant="h6">
-                    {formatPosition(currentStatus.PTZPosition?.PanTilt?.x)}
-                  </Typography>
-                </Stack>
+            {cameraData?.isLoading || !currentStatus ? (
+              <SkeletonLoader variant="status-card" />
+            ) : (
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Stack spacing={1}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Pan
+                    </Typography>
+                    <Typography variant="h6">
+                      {formatPosition(currentStatus.PTZPosition?.PanTilt?.x)}
+                    </Typography>
+                  </Stack>
+                </Grid>
+                <Grid item xs={6}>
+                  <Stack spacing={1}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Tilt
+                    </Typography>
+                    <Typography variant="h6">
+                      {formatPosition(currentStatus.PTZPosition?.PanTilt?.y)}
+                    </Typography>
+                  </Stack>
+                </Grid>
+                <Grid item xs={12}>
+                  <Divider />
+                </Grid>
+                <Grid item xs={12}>
+                  <Stack spacing={1}>
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Zoom
+                    </Typography>
+                    <Typography variant="h6">
+                      {formatPosition(currentStatus.PTZPosition?.Zoom?.x)}
+                    </Typography>
+                  </Stack>
+                </Grid>
               </Grid>
-              <Grid item xs={6}>
-                <Stack spacing={1}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Tilt
-                  </Typography>
-                  <Typography variant="h6">
-                    {formatPosition(currentStatus.PTZPosition?.PanTilt?.y)}
-                  </Typography>
-                </Stack>
-              </Grid>
-              <Grid item xs={12}>
-                <Divider />
-              </Grid>
-              <Grid item xs={12}>
-                <Stack spacing={1}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Zoom
-                  </Typography>
-                  <Typography variant="h6">
-                    {formatPosition(currentStatus.PTZPosition?.Zoom?.x)}
-                  </Typography>
-                </Stack>
-              </Grid>
-            </Grid>
+            )}
           </CardContent>
         </Card>
       )}
@@ -156,52 +161,56 @@ const Status: React.FC = () => {
           <Typography variant="h6" gutterBottom>
             All Cameras ({allCameras.length})
           </Typography>
-          <Stack spacing={2}>
-            {allCameras.map((camera) => (
-              <Card key={camera.nickname} variant="outlined">
-                <CardContent>
-                  <Stack
-                    direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                  >
-                    <Stack direction="row" alignItems="center" spacing={2}>
-                      {camera.status === "online" ? (
-                        <Videocam color="success" />
-                      ) : (
-                        <VideocamOff color="error" />
-                      )}
-                      <Stack>
-                        <Typography variant="subtitle1">
-                          {camera.nickname}
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          textOverflow="ellipsis"
-                          overflow="hidden"
-                          whiteSpace="nowrap"
-                          width="25ch"
-                        >
-                          {camera.host}:{camera.port}
-                        </Typography>
+          {allCameras.length === 0 ? (
+            <SkeletonLoader variant="camera-list" />
+          ) : (
+            <Stack spacing={2}>
+              {allCameras.map((camera) => (
+                <Card key={camera.nickname} variant="outlined">
+                  <CardContent>
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
+                      <Stack direction="row" alignItems="center" spacing={2}>
+                        {camera.status === "online" ? (
+                          <Videocam color="success" />
+                        ) : (
+                          <VideocamOff color="error" />
+                        )}
+                        <Stack>
+                          <Typography variant="subtitle1">
+                            {camera.nickname}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            textOverflow="ellipsis"
+                            overflow="hidden"
+                            whiteSpace="nowrap"
+                            width="25ch"
+                          >
+                            {camera.host}:{camera.port}
+                          </Typography>
+                        </Stack>
                       </Stack>
+                      <Chip
+                        label={camera.status}
+                        color={getStatusColor(camera.status)}
+                        size="small"
+                      />
                     </Stack>
-                    <Chip
-                      label={camera.status}
-                      color={getStatusColor(camera.status)}
-                      size="small"
-                    />
-                  </Stack>
-                  {camera.error && (
-                    <Typography variant="body2" color="error">
-                      {camera.error}
-                    </Typography>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </Stack>
+                    {camera.error && (
+                      <Typography variant="body2" color="error">
+                        {camera.error}
+                      </Typography>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </Stack>
+          )}
         </CardContent>
       </Card>
     </Stack>

@@ -9,6 +9,7 @@ import {
 } from "@mui/icons-material";
 import { useAppContext } from "../contexts/AppContext";
 import { useCameraControl, useOBSControl, useAutoDismissError } from "../hooks";
+import SkeletonLoader from "./SkeletonLoader";
 
 const ActionBar: React.FC = () => {
   const [nightMode, setNightMode] = useState<boolean | undefined>(undefined);
@@ -85,45 +86,49 @@ const ActionBar: React.FC = () => {
         </Alert>
       )}
 
-      {/* Stream View Toggle */}
+      {/* Show skeleton while loading cameras or night mode */}
+      {!selectedCamera || nightModeLoading || nightMode === undefined ? (
+        <SkeletonLoader variant="action-bar" />
+      ) : (
+        <>
+          {/* Stream View Toggle */}
+          <ToggleButtonGroup
+            value={streamView?.layout_mode || "grid"}
+            exclusive
+            onChange={(_, newView) => {
+              if (newView) {
+                handleStreamViewChange(newView);
+              }
+            }}
+            size="small"
+          >
+            <ToggleButton value="grid">
+              <GridView fontSize="inherit" />
+            </ToggleButton>
+            <ToggleButton value="highlight">
+              <CenterFocusStrong fontSize="inherit" />
+            </ToggleButton>
+          </ToggleButtonGroup>
 
-      <ToggleButtonGroup
-        value={streamView?.layout_mode || "grid"}
-        exclusive
-        onChange={(_, newView) => {
-          if (newView) {
-            handleStreamViewChange(newView);
-          }
-        }}
-        size="small"
-      >
-        <ToggleButton value="grid">
-          <GridView fontSize="inherit" />
-        </ToggleButton>
-        <ToggleButton value="highlight">
-          <CenterFocusStrong fontSize="inherit" />
-        </ToggleButton>
-      </ToggleButtonGroup>
-
-      {/* Night Mode Toggle */}
-      {selectedCamera && (
-        <ToggleButtonGroup
-          value={nightMode ? "dark" : "bright"}
-          exclusive
-          onChange={(_, newMode) => {
-            if (newMode && !nightModeLoading) {
-              handleNightModeToggle();
-            }
-          }}
-          size="small"
-        >
-          <ToggleButton value="bright" disabled={nightModeLoading}>
-            <WbSunny fontSize="inherit" />
-          </ToggleButton>
-          <ToggleButton value="dark" disabled={nightModeLoading}>
-            <NightlightRound fontSize="inherit" />
-          </ToggleButton>
-        </ToggleButtonGroup>
+          {/* Night Mode Toggle */}
+          <ToggleButtonGroup
+            value={nightMode ? "dark" : "bright"}
+            exclusive
+            onChange={(_, newMode) => {
+              if (newMode && !nightModeLoading) {
+                handleNightModeToggle();
+              }
+            }}
+            size="small"
+          >
+            <ToggleButton value="bright" disabled={nightModeLoading}>
+              <WbSunny fontSize="inherit" />
+            </ToggleButton>
+            <ToggleButton value="dark" disabled={nightModeLoading}>
+              <NightlightRound fontSize="inherit" />
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </>
       )}
     </>
   );

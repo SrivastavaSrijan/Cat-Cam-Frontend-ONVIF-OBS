@@ -12,8 +12,9 @@ import { Videocam } from "@mui/icons-material";
 import { useAppContext } from "../contexts/AppContext";
 import { useAutoDismissError } from "../hooks";
 import { CAMERA_PRESETS } from "../utils/contants";
+import SkeletonLoader from "./SkeletonLoader";
 
-const CameraControl: React.FC = () => {
+const Presets: React.FC = () => {
   const { selectedCamera, getCameraData, gotoPreset } = useAppContext();
   const { error, setError } = useAutoDismissError();
 
@@ -49,7 +50,9 @@ const CameraControl: React.FC = () => {
       <Card>
         <CardContent>
           <Stack gap={2}>
-            {presets.length > 0 ? (
+            {loading ? (
+              <SkeletonLoader variant="presets" />
+            ) : presets.length > 0 ? (
               <ToggleButtonGroup
                 exclusive
                 value={selectedPreset}
@@ -74,7 +77,7 @@ const CameraControl: React.FC = () => {
               </ToggleButtonGroup>
             ) : (
               <Typography variant="body2" color="text.secondary" align="center">
-                {loading ? "Loading..." : "No presets"}
+                No presets
               </Typography>
             )}
           </Stack>
@@ -86,4 +89,4 @@ const CameraControl: React.FC = () => {
   );
 };
 
-export default CameraControl;
+export default Presets;

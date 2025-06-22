@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import { useAppContext } from "../contexts/AppContext";
 import { useOBSControl } from "../hooks";
+import SkeletonLoader from "./SkeletonLoader";
 
 const CameraSelector: React.FC = () => {
   const {
@@ -17,6 +18,7 @@ const CameraSelector: React.FC = () => {
     allCameras,
     selectCamera,
     loadCameraList,
+    loadCameraData,
     isLoadingCameras,
   } = useAppContext();
 
@@ -33,6 +35,7 @@ const CameraSelector: React.FC = () => {
     if (cameraData?.status === "online") {
       selectCamera(camera);
       applyTransformation("highlight", cameraData.nickname);
+      loadCameraData(cameraData.nickname);
     }
   };
 
@@ -41,24 +44,30 @@ const CameraSelector: React.FC = () => {
       <CardContent>
         <Stack spacing={2}>
           <FormControl fullWidth>
-            <Select
-              size="small"
-              value={selectedCamera || ""}
-              onChange={handleSelectChange}
-              displayEmpty
-            >
-              {allCameras.map((camera) => (
-                <MenuItem
-                  key={camera.nickname}
-                  value={camera.nickname}
-                  disabled={camera.status === "offline"}
-                >
-                  <Stack direction="row" alignItems="center" spacing={2}>
-                    <Typography fontSize="small">{camera.nickname}</Typography>
-                  </Stack>
-                </MenuItem>
-              ))}
-            </Select>
+            {isLoadingCameras ? (
+              <SkeletonLoader variant="camera-selector" />
+            ) : (
+              <Select
+                size="small"
+                value={selectedCamera || ""}
+                onChange={handleSelectChange}
+                displayEmpty
+              >
+                {allCameras.map((camera) => (
+                  <MenuItem
+                    key={camera.nickname}
+                    value={camera.nickname}
+                    disabled={camera.status === "offline"}
+                  >
+                    <Stack direction="row" alignItems="center" spacing={2}>
+                      <Typography fontSize="small">
+                        {camera.nickname}
+                      </Typography>
+                    </Stack>
+                  </MenuItem>
+                ))}
+              </Select>
+            )}
           </FormControl>
         </Stack>
       </CardContent>

@@ -249,6 +249,7 @@ export const useAppData = () => {
 
           if (highlightedCamera) {
             setSelectedCamera(highlightedCamera.nickname);
+            loadCameraData(highlightedCamera.nickname);
             console.log(
               "Auto-selected camera from current OBS highlight:",
               highlightedCamera.nickname
@@ -267,6 +268,7 @@ export const useAppData = () => {
       const onlineCameras = cameras.filter((cam) => cam.status === "online");
       if (!selectedCamera && onlineCameras.length > 0) {
         setSelectedCamera(onlineCameras[0].nickname);
+        loadCameraData(onlineCameras[0].nickname);
         console.log(
           "Auto-selected first online camera:",
           onlineCameras[0].nickname
@@ -282,7 +284,14 @@ export const useAppData = () => {
     } finally {
       cameraListLoadingRef.current = false;
     }
-  }, [camerasLoaded, selectStreamView, selectedCamera, showError, withLoading]);
+  }, [
+    camerasLoaded,
+    loadCameraData,
+    selectStreamView,
+    selectedCamera,
+    showError,
+    withLoading,
+  ]);
 
   const selectCamera = useCallback((nickname: string) => {
     setSelectedCamera(nickname);

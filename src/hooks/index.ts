@@ -5,4 +5,6 @@ export { useAppData } from "./useApp";
 export { useOBSControl } from "./useOBSControl";
 export { useAutoDismissError } from "./useAutoDismissError";
 export { useCameraOverlay, type CameraMode } from "./useCameraOverlay";
-export { useMjpegStream } from "./useMjpegStream";
+export { useStream as useMjpegStream } from "./useStream";
+export { useOrientation } from "./useOrientation";
+export { useEventListener } from "./useEventListener";

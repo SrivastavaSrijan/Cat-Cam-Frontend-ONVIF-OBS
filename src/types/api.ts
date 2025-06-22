@@ -43,6 +43,9 @@ export interface MovementLimits {
 export interface CameraStatus {
   PTZPosition: PTZPosition;
   limits: MovementLimits;
+  online?: boolean;
+  host?: string;
+  error?: string;
 }
 
 export interface CameraInfo {
@@ -53,7 +56,7 @@ export interface CameraInfo {
   error?: string;
   limits?: MovementLimits;
   current_position?: PTZPosition;
-  online?: boolean;
+  online: boolean;
 }
 
 export interface Preset {
@@ -160,6 +163,7 @@ export interface TransformRequest {
 
 export interface StartProjectorRequest {
   source_name: string;
+  monitor_index?: number;
 }
 
 export interface CloseProjectorRequest {

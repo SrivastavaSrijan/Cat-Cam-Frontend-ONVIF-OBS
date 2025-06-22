@@ -14,6 +14,7 @@ export const useCameraOverlay = (open: boolean) => {
     allCameras,
     selectCamera,
     loadCameraList,
+    loadCameraData,
     isLoadingCameras,
     getCameraData,
     gotoPreset,
@@ -98,17 +99,25 @@ export const useCameraOverlay = (open: boolean) => {
       }
 
       const newCamera = cameraList[newIndex];
-      setOverlayCameraId(newCamera);
-      selectCamera(newCamera);
 
       // Transform OBS to highlight the new camera
       try {
         await applyTransformation("highlight", newCamera);
+        await loadCameraData(newCamera);
       } catch (error) {
         console.error("Failed to switch OBS view:", error);
+      } finally {
+        selectCamera(newCamera);
+        setOverlayCameraId(newCamera);
       }
     },
-    [cameraList, overlayCameraId, selectCamera, applyTransformation]
+    [
+      cameraList,
+      selectCamera,
+      overlayCameraId,
+      applyTransformation,
+      loadCameraData,
+    ]
   );
 
   // Show swipe indicator

@@ -1,11 +1,13 @@
 export { default as ActionBar } from "./ActionBar";
-export { default as CameraControl } from "./CameraControl";
-export { default as CameraOverlay } from "./CameraOverlay";
+export { default as Presets } from "./Presets";
+export { default as ControllerOverlay } from "./ControllerOverlay";
+export { default as PlayerWithController } from "./PlayerWithController";
 export { default as CameraSelector } from "./CameraSelector";
 export { default as InstallPrompt } from "./InstallPrompt";
-export { default as MjpegPlayer } from "./MjpegPlayer";
+export { default as Player } from "./Player";
 export { default as Navbar } from "./Navbar";
 export { default as RunnerScript } from "./RunnerScript";
 export { default as Status } from "./Status";
 export { default as StreamControls } from "./StreamControls";
 export { default as Fabs } from "./Fabs";
+export { default as SkeletonLoader } from "./SkeletonLoader";

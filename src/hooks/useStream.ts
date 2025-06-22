@@ -6,7 +6,7 @@ import type {
   UseMjpegStreamReturn,
 } from "../types/api";
 
-export const useMjpegStream = (): UseMjpegStreamReturn => {
+export const useStream = (): UseMjpegStreamReturn => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
