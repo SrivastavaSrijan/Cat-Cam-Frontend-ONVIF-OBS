@@ -61,6 +61,7 @@ const darkTheme = createTheme({
         fontSize: "inherit", // Default icon size
       },
     },
+
     MuiCard: {
       styleOverrides: {
         root: {
@@ -84,71 +85,6 @@ const darkTheme = createTheme({
           borderRadius: "8px",
           textTransform: "none",
           fontWeight: 500,
-        },
-        contained: {
-          boxShadow: "none",
-          "&:hover": {
-            boxShadow: "0 2px 8px rgba(143, 188, 143, 0.3)",
-          },
-        },
-      },
-    },
-    MuiToggleButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: "8px",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
-          "&.Mui-selected": {
-            backgroundColor: "#8fbc8f",
-            color: "#1a1d23",
-            "&:hover": {
-              backgroundColor: "#a8cfa8",
-            },
-          },
-        },
-      },
-    },
-    MuiChip: {
-      styleOverrides: {
-        root: {
-          borderRadius: "6px",
-        },
-        colorSuccess: {
-          backgroundColor: "rgba(127, 176, 105, 0.2)",
-          color: "#7fb069",
-          borderColor: "rgba(127, 176, 105, 0.5)",
-        },
-        colorError: {
-          backgroundColor: "rgba(242, 139, 130, 0.2)",
-          color: "#f28b82",
-          borderColor: "rgba(242, 139, 130, 0.5)",
-        },
-      },
-    },
-    MuiAlert: {
-      styleOverrides: {
-        root: {
-          borderRadius: "8px",
-        },
-        standardWarning: {
-          backgroundColor: "rgba(253, 214, 99, 0.1)",
-          color: "#fdd663",
-          border: "1px solid rgba(253, 214, 99, 0.3)",
-        },
-        standardError: {
-          backgroundColor: "rgba(242, 139, 130, 0.1)",
-          color: "#f28b82",
-          border: "1px solid rgba(242, 139, 130, 0.3)",
-        },
-        standardSuccess: {
-          backgroundColor: "rgba(127, 176, 105, 0.1)",
-          color: "#7fb069",
-          border: "1px solid rgba(127, 176, 105, 0.3)",
-        },
-        standardInfo: {
-          backgroundColor: "rgba(143, 188, 143, 0.1)",
-          color: "#8fbc8f",
-          border: "1px solid rgba(143, 188, 143, 0.3)",
         },
       },
     },

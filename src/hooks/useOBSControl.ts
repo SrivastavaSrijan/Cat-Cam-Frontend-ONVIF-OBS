@@ -1,93 +1,119 @@
 import { useState, useCallback } from "react";
-import { useApi } from "./useApi";
-import { useNotification } from "./useNotification";
-import { useLoading } from "./useLoading";
-import { useAppContext } from "../contexts/AppContext";
-import type { StreamView } from "./useApp";
+import { apiClient, ApiClientError } from "../api/client";
+import type {
+  Scene,
+  CurrentScene,
+  TransformationState,
+  VirtualCameraStatus,
+  UseOBSControlReturn,
+} from "../types/api";
 
-export const useOBSControl = () => {
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const { loading, withLoading } = useLoading();
-  const { showError, showSuccess } = useNotification();
-  const api = useApi();
+export const useOBSControl = (): UseOBSControlReturn => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const { selectStreamView } = useAppContext();
+  const clearError = useCallback(() => setError(null), []);
 
-  const switchStreamView = useCallback(
-    async (view: StreamView["layout_mode"], activeCamera?: string) => {
+  const handleApiCall = useCallback(
+    async <T>(apiCall: () => Promise<T>): Promise<T> => {
+      setLoading(true);
+      setError(null);
       try {
-        if (view === "highlight" && activeCamera) {
-          await withLoading(() => api.obsTransform("highlight", activeCamera));
-          showSuccess(`Switched to highlight view for ${activeCamera}`);
-          selectStreamView({
-            layout_mode: "highlight",
-            highlighted_source: activeCamera,
-          });
-        } else if (view === "grid") {
-          await withLoading(() => api.obsTransform("grid"));
-          selectStreamView({
-            layout_mode: "grid",
-          });
-          showSuccess("Switched to mosaic view");
-        }
-      } catch (error) {
-        showError(
-          "OBS connection lost. Use the floating action button to reconnect."
-        );
+        const result = await apiCall();
+        return result;
+      } catch (err) {
+        const errorMessage =
+          err instanceof ApiClientError
+            ? err.message
+            : err instanceof Error
+            ? err.message
+            : "An unknown error occurred";
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setLoading(false);
       }
     },
-    [withLoading, showSuccess, selectStreamView, api, showError]
+    []
+  );
+
+  // OBS operations
+  const getScenes = useCallback(
+    (): Promise<Scene[]> => handleApiCall(() => apiClient.getScenes()),
+    [handleApiCall]
+  );
+
+  const getCurrentScene = useCallback(
+    (): Promise<CurrentScene> =>
+      handleApiCall(() => apiClient.getCurrentScene()),
+    [handleApiCall]
   );
 
   const switchScene = useCallback(
-    async (sceneName: string) => {
-      try {
-        await withLoading(() => api.obsSwitchScene(sceneName));
-        showSuccess(`Switched to scene: ${sceneName}`);
-      } catch (error) {
-        showError(`Failed to switch to scene: ${sceneName}`);
-      }
-    },
-    [withLoading, api, showSuccess, showError]
+    (sceneName: string): Promise<void> =>
+      handleApiCall(() => apiClient.switchScene(sceneName)),
+    [handleApiCall]
   );
 
-  const reconnect = useCallback(async () => {
-    try {
-      await withLoading(() => api.obsReconnect());
-      showSuccess("Successfully reconnected to OBS");
-    } catch (error) {
-      showError("Failed to reconnect to OBS");
-    }
-  }, [withLoading, api, showSuccess, showError]);
+  const getTransformationState = useCallback(
+    (): Promise<TransformationState> =>
+      handleApiCall(() => apiClient.getTransformationState()),
+    [handleApiCall]
+  );
 
-  const refreshStreams = useCallback(async () => {
-    try {
-      setIsRefreshing(true);
-      // Switch to "Please Wait" scene
-      await api.obsSwitchScene("Please Wait");
+  const applyTransformation = useCallback(
+    (type: "grid" | "highlight", activeSource?: string): Promise<void> =>
+      handleApiCall(() => apiClient.applyTransformation(type, activeSource)),
+    [handleApiCall]
+  );
 
-      // Wait 5 seconds then switch back to Mosaic
-      setTimeout(async () => {
-        try {
-          await api.obsSwitchScene("Mosaic");
-          showSuccess("RTSP streams refreshed successfully");
-        } catch (error) {
-          showError("Failed to complete stream refresh");
-        } finally {
-          setIsRefreshing(false);
-        }
-      }, 5000);
-    } catch (error) {
-      showError("Failed to refresh streams");
-    }
-  }, [api, showSuccess, showError]);
+  const reconnect = useCallback(
+    (): Promise<void> => handleApiCall(() => apiClient.reconnectOBS()),
+    [handleApiCall]
+  );
+
+  const startVirtualCamera = useCallback(
+    (): Promise<void> => handleApiCall(() => apiClient.startVirtualCamera()),
+    [handleApiCall]
+  );
+
+  const stopVirtualCamera = useCallback(
+    (): Promise<void> => handleApiCall(() => apiClient.stopVirtualCamera()),
+    [handleApiCall]
+  );
+
+  const getVirtualCameraStatus = useCallback(
+    (): Promise<VirtualCameraStatus> =>
+      handleApiCall(() => apiClient.getVirtualCameraStatus()),
+    [handleApiCall]
+  );
+
+  const startProjector = useCallback(
+    (sourceName: string): Promise<void> =>
+      handleApiCall(() => apiClient.startProjector(sourceName)),
+    [handleApiCall]
+  );
+
+  const closeProjector = useCallback(
+    (): Promise<void> => handleApiCall(() => apiClient.closeProjector()),
+    [handleApiCall]
+  );
 
   return {
-    isRefreshing,
     loading,
-    switchStreamView,
+    error,
+    clearError,
+    // OBS operations
+    getScenes,
+    getCurrentScene,
     switchScene,
+    getTransformationState,
+    applyTransformation,
     reconnect,
-    refreshStreams,
+    startVirtualCamera,
+    stopVirtualCamera,
+    getVirtualCameraStatus,
+    startProjector,
+    closeProjector,
   };
 };

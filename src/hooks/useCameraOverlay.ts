@@ -1,9 +1,9 @@
 import { useState, useCallback, useRef } from "react";
 import { useSwipeable } from "react-swipeable";
-import { useCameraControl } from "./useCameraControl";
 import { useAppContext } from "../contexts/AppContext";
 import { useOBSControl } from "./useOBSControl";
 import { CAMERA_PRESETS } from "../utils/contants";
+import type { MovementDirection } from "../types/api";
 
 export type CameraMode = "normal" | "move";
 
@@ -14,16 +14,26 @@ export const useCameraOverlay = (open: boolean) => {
     allCameras,
     selectCamera,
     loadCameraList,
+    loadCameraData,
     isLoadingCameras,
+    getCameraData,
+    gotoPreset,
+    isCameraMoving,
+    startContinuousMove,
+    stopContinuousMove,
+    moveCamera,
   } = useAppContext();
-  const { switchStreamView } = useOBSControl();
+
+  const { applyTransformation } = useOBSControl();
 
   // Initialize overlay camera - use selected camera or first available
   const [overlayCameraId, setOverlayCameraId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Use overlay camera for camera control
-  const cameraControl = useCameraControl(overlayCameraId);
+  // Get camera data from app context
+  const currentCameraData = overlayCameraId
+    ? getCameraData(overlayCameraId)
+    : null;
 
   const [cameraMode, setCameraMode] = useState<CameraMode>("normal");
   const [lastTap, setLastTap] = useState<number>(0);
@@ -55,7 +65,7 @@ export const useCameraOverlay = (open: boolean) => {
     // Transform OBS to highlight the initial camera
     Promise.resolve().then(async () => {
       try {
-        await switchStreamView("highlight", initialCamera);
+        await applyTransformation("highlight", initialCamera);
       } catch (error) {
         console.error("Failed to switch OBS view:", error);
       }
@@ -89,17 +99,25 @@ export const useCameraOverlay = (open: boolean) => {
       }
 
       const newCamera = cameraList[newIndex];
-      setOverlayCameraId(newCamera);
-      selectCamera(newCamera);
 
       // Transform OBS to highlight the new camera
       try {
-        await switchStreamView("highlight", newCamera);
+        await applyTransformation("highlight", newCamera);
+        await loadCameraData(newCamera);
       } catch (error) {
         console.error("Failed to switch OBS view:", error);
+      } finally {
+        selectCamera(newCamera);
+        setOverlayCameraId(newCamera);
       }
     },
-    [cameraList, overlayCameraId, selectCamera, switchStreamView]
+    [
+      cameraList,
+      selectCamera,
+      overlayCameraId,
+      applyTransformation,
+      loadCameraData,
+    ]
   );
 
   // Show swipe indicator
@@ -118,33 +136,34 @@ export const useCameraOverlay = (open: boolean) => {
   // Enhanced preset navigation
   const navigatePreset = useCallback(
     async (direction: "next" | "prev") => {
-      if (cameraControl.presets.length === 0 || !overlayCameraId) return;
+      if (!currentCameraData?.presets.length || !overlayCameraId) return;
 
-      const currentIndex = cameraControl.selectedPreset
-        ? cameraControl.presets.findIndex(
-            (preset) => preset.Token === cameraControl.selectedPreset
+      const currentIndex = currentCameraData.selectedPreset
+        ? currentCameraData.presets.findIndex(
+            (preset) => preset.Token === currentCameraData.selectedPreset
           )
         : -1;
 
       let newIndex: number;
 
       if (currentIndex === -1) {
-        newIndex = direction === "next" ? 0 : cameraControl.presets.length - 1;
+        newIndex =
+          direction === "next" ? 0 : currentCameraData.presets.length - 1;
       } else {
         if (direction === "next") {
-          newIndex = (currentIndex + 1) % cameraControl.presets.length;
+          newIndex = (currentIndex + 1) % currentCameraData.presets.length;
         } else {
           newIndex =
             currentIndex === 0
-              ? cameraControl.presets.length - 1
+              ? currentCameraData.presets.length - 1
               : currentIndex - 1;
         }
       }
 
-      const newPreset = cameraControl.presets[newIndex];
-      await cameraControl.gotoPreset(newPreset.Token);
+      const newPreset = currentCameraData.presets[newIndex];
+      await gotoPreset(overlayCameraId, newPreset.Token);
     },
-    [cameraControl, overlayCameraId]
+    [currentCameraData, overlayCameraId, gotoPreset]
   );
 
   // Long swipe handler for continuous movement
@@ -153,7 +172,7 @@ export const useCameraOverlay = (open: boolean) => {
       if (
         cameraMode !== "move" ||
         !overlayCameraId ||
-        cameraControl.isContinuousMoving
+        isCameraMoving(overlayCameraId)
       )
         return;
 
@@ -161,10 +180,19 @@ export const useCameraOverlay = (open: boolean) => {
 
       longSwipeTimeoutRef.current = setTimeout(async () => {
         showSwipeIndicator(direction);
-        await cameraControl.startContinuousMove(direction);
+        await startContinuousMove(
+          overlayCameraId,
+          direction as MovementDirection
+        );
       }, 500);
     },
-    [cameraMode, overlayCameraId, cameraControl, showSwipeIndicator]
+    [
+      cameraMode,
+      overlayCameraId,
+      isCameraMoving,
+      showSwipeIndicator,
+      startContinuousMove,
+    ]
   );
 
   const handleLongSwipeEnd = useCallback(
@@ -178,13 +206,19 @@ export const useCameraOverlay = (open: boolean) => {
         longSwipeTimeoutRef.current = null;
       }
 
-      if (cameraControl.isContinuousMoving) {
-        await cameraControl.stopContinuousMove();
+      if (isCameraMoving(overlayCameraId)) {
+        await stopContinuousMove(overlayCameraId);
       } else if (swipeDuration < 500 && direction) {
-        await cameraControl.moveCamera(direction);
+        await moveCamera(overlayCameraId, direction as MovementDirection);
       }
     },
-    [overlayCameraId, cameraMode, cameraControl]
+    [
+      overlayCameraId,
+      cameraMode,
+      isCameraMoving,
+      stopContinuousMove,
+      moveCamera,
+    ]
   );
 
   // Enhanced swipe handlers
@@ -263,43 +297,45 @@ export const useCameraOverlay = (open: boolean) => {
 
   // Slot machine effect helpers
   const getPresetSlots = useCallback(() => {
-    if (cameraControl.presets.length === 0) {
+    if (!currentCameraData?.presets.length) {
       return { prev: null, current: null, next: null };
     }
 
-    if (cameraControl.presets.length === 1) {
+    if (currentCameraData.presets.length === 1) {
       return {
         prev: null,
-        current: cameraControl.presets[0],
+        current: currentCameraData.presets[0],
         next: null,
       };
     }
 
-    const currentIndex = cameraControl.selectedPreset
-      ? cameraControl.presets.findIndex(
-          (preset) => preset.Token === cameraControl.selectedPreset
+    const currentIndex = currentCameraData.selectedPreset
+      ? currentCameraData.presets.findIndex(
+          (preset) => preset.Token === currentCameraData.selectedPreset
         )
       : -1;
 
     if (currentIndex === -1) {
       // No preset selected, show first preset as current
       return {
-        prev: cameraControl.presets[cameraControl.presets.length - 1],
-        current: cameraControl.presets[0],
-        next: cameraControl.presets[1] || cameraControl.presets[0],
+        prev: currentCameraData.presets[currentCameraData.presets.length - 1],
+        current: currentCameraData.presets[0],
+        next: currentCameraData.presets[1] || currentCameraData.presets[0],
       };
     }
 
     const prevIndex =
-      currentIndex === 0 ? cameraControl.presets.length - 1 : currentIndex - 1;
-    const nextIndex = (currentIndex + 1) % cameraControl.presets.length;
+      currentIndex === 0
+        ? currentCameraData.presets.length - 1
+        : currentIndex - 1;
+    const nextIndex = (currentIndex + 1) % currentCameraData.presets.length;
 
     return {
-      prev: cameraControl.presets[prevIndex],
-      current: cameraControl.presets[currentIndex],
-      next: cameraControl.presets[nextIndex],
+      prev: currentCameraData.presets[prevIndex],
+      current: currentCameraData.presets[currentIndex],
+      next: currentCameraData.presets[nextIndex],
     };
-  }, [cameraControl.presets, cameraControl.selectedPreset]);
+  }, [currentCameraData]);
 
   const getCameraSlots = useCallback(() => {
     if (cameraList.length === 0)
@@ -362,8 +398,14 @@ export const useCameraOverlay = (open: boolean) => {
     cameraList,
     allCameras,
 
-    // Camera control
-    ...cameraControl,
+    // Camera control state from context
+    presets: currentCameraData?.presets || [],
+    selectedPreset: currentCameraData?.selectedPreset || null,
+    loading: currentCameraData?.isLoading || false,
+    error: currentCameraData?.error || null,
+    isContinuousMoving: overlayCameraId
+      ? isCameraMoving(overlayCameraId)
+      : false,
 
     // Handlers
     swipeHandlers,

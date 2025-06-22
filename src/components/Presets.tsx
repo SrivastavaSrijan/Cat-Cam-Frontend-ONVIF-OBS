@@ -10,14 +10,18 @@ import {
 } from "@mui/material";
 import { Videocam } from "@mui/icons-material";
 import { useAppContext } from "../contexts/AppContext";
-import { useCameraControl, useAutoDismissError } from "../hooks";
+import { useAutoDismissError } from "../hooks";
 import { CAMERA_PRESETS } from "../utils/contants";
+import SkeletonLoader from "./SkeletonLoader";
 
-const CameraControl: React.FC = () => {
-  const { selectedCamera } = useAppContext();
+const Presets: React.FC = () => {
+  const { selectedCamera, getCameraData, gotoPreset } = useAppContext();
   const { error, setError } = useAutoDismissError();
-  const { presets, selectedPreset, loading, gotoPreset } =
-    useCameraControl(selectedCamera);
+
+  const cameraData = selectedCamera ? getCameraData(selectedCamera) : null;
+  const presets = cameraData?.presets || [];
+  const selectedPreset = cameraData?.selectedPreset || null;
+  const loading = cameraData?.isLoading || false;
 
   if (!selectedCamera) {
     return (
@@ -46,11 +50,15 @@ const CameraControl: React.FC = () => {
       <Card>
         <CardContent>
           <Stack gap={2}>
-            {presets.length > 0 ? (
+            {loading ? (
+              <SkeletonLoader variant="presets" />
+            ) : presets.length > 0 ? (
               <ToggleButtonGroup
                 exclusive
                 value={selectedPreset}
-                onChange={(_, value) => value && gotoPreset(value)}
+                onChange={(_, value) =>
+                  value && selectedCamera && gotoPreset(selectedCamera, value)
+                }
                 fullWidth
                 color="primary"
               >
@@ -69,7 +77,7 @@ const CameraControl: React.FC = () => {
               </ToggleButtonGroup>
             ) : (
               <Typography variant="body2" color="text.secondary" align="center">
-                {loading ? "Loading..." : "No presets"}
+                No presets
               </Typography>
             )}
           </Stack>
@@ -81,4 +89,4 @@ const CameraControl: React.FC = () => {
   );
 };
 
-export default CameraControl;
+export default Presets;

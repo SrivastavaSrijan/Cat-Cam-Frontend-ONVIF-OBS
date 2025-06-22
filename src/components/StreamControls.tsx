@@ -14,7 +14,7 @@ import {
   Laptop,
   Close,
 } from "@mui/icons-material";
-import { useApi, useLoading } from "../hooks";
+import { useOBSControl, useLoading } from "../hooks";
 
 interface StreamControlsProps {
   onRefresh?: () => void;
@@ -33,16 +33,17 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
 
   // Dialog State
 
-  const api = useApi();
+  const obsControl = useOBSControl();
   const { withLoading } = useLoading();
 
   // Virtual Camera Functions
   const checkVirtualCameraStatus = useCallback(async () => {
     setIsVirtualCameraLoading(true);
     try {
-      const response = await withLoading(() => api.checkVirtualCameraStatus());
-      const response_data = response as { success?: boolean };
-      if (response_data.success) {
+      const response = await withLoading(() =>
+        obsControl.getVirtualCameraStatus()
+      );
+      if (response.active) {
         setVirtualCameraStatus("active");
       } else {
         setVirtualCameraStatus("inactive");
@@ -53,7 +54,7 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
     } finally {
       setIsVirtualCameraLoading(false);
     }
-  }, [api, withLoading]);
+  }, [obsControl, withLoading]);
 
   const toggleVirtualCamera = async (action: "start" | "stop") => {
     if (isVirtualCameraLoading) return;
@@ -61,11 +62,11 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
     setIsVirtualCameraLoading(true);
     try {
       if (action === "start") {
-        await withLoading(() => api.startVirtualCamera());
+        await withLoading(() => obsControl.startVirtualCamera());
         setVirtualCameraStatus("active");
         setTimeout(() => onRefresh?.(), 1000);
       } else {
-        await withLoading(() => api.stopVirtualCamera());
+        await withLoading(() => obsControl.stopVirtualCamera());
         setVirtualCameraStatus("inactive");
       }
     } catch (error) {
@@ -82,12 +83,12 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
     try {
       if (monitor) {
         // Start projector
-        await withLoading(() => api.startProjector(monitor));
+        await withLoading(() => obsControl.startProjector(monitor));
         setProjectorActive(true);
         setActiveProjectorMonitor(monitor);
       } else {
         // Close projector
-        await withLoading(() => api.closeProjector());
+        await withLoading(() => obsControl.closeProjector());
         setProjectorActive(false);
         setActiveProjectorMonitor(null);
       }
@@ -125,9 +126,9 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
             {isVirtualCameraLoading ? (
               <CircularProgress size={18} />
             ) : virtualCameraStatus === "active" ? (
-              <Videocam fontSize="inherit" />
+              <Videocam />
             ) : (
-              <VideocamOff fontSize="inherit" />
+              <VideocamOff />
             )}
           </ToggleButton>
         </ToggleButtonGroup>
@@ -155,7 +156,7 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
               )
             }
           >
-            <Monitor fontSize="inherit" />
+            <Monitor />
           </ToggleButton>
           <ToggleButton
             value="secondary"
@@ -167,7 +168,7 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
               )
             }
           >
-            <Laptop fontSize="inherit" />
+            <Laptop />
           </ToggleButton>
           {projectorActive && (
             <ToggleButton
@@ -175,7 +176,7 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
               onClick={() => handleProjectorToggle(null)}
               disabled={projectorLoading}
             >
-              <Close fontSize="inherit" />
+              <Close />
             </ToggleButton>
           )}
         </ToggleButtonGroup>

@@ -1,5 +1,5 @@
 import type React from "react";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import {
   Box,
   IconButton,
@@ -16,8 +16,9 @@ import {
 } from "@mui/icons-material";
 import { useMjpegStream } from "../hooks";
 import { useAppContext } from "../contexts/AppContext";
+import SkeletonLoader from "./SkeletonLoader";
 
-interface MjpegPlayerProps {
+interface PlayerProps {
   title?: string;
   width?: number | string;
   height?: number | string;
@@ -31,13 +32,15 @@ interface MjpegPlayerProps {
     open: boolean;
     onClose: () => void;
     orientation?: "portrait" | "landscape" | "auto";
+    isOverlayMode?: boolean;
   }>;
+  isOverlayMode?: boolean; // Add this prop
 }
 // Simple black placeholder
 const placeholderImage =
   "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMSIgaGVpZ2h0PSIxIiB2aWV3Qm94PSIwIDAgMSAxIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiMwMDAiLz48L3N2Zz4=";
 
-const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
+const Player: React.FC<PlayerProps> = ({
   title = "MJPEG Stream",
   width = "100%",
   height = 500,
@@ -47,17 +50,48 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
   overlayOpen = false,
   onOverlayClose,
   OverlayComponent,
+  isOverlayMode = true, // Default to overlay mode
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Use MJPEG stream hook
-  const { streamURL, streamPlayerRef, isStreaming } = useAppContext();
-  const { stopStream, startStream } = useMjpegStream();
+  const { streamURL, setStreamURL, streamPlayerRef, isStreaming } =
+    useAppContext();
+  const { stopStream, startStream, getStatus } = useMjpegStream();
 
   // Auto-start stream once when component mounts if autoPlay is enabled
   const [hasAutoStarted, setHasAutoStarted] = useState(false);
+
+  const handleStartStream = useCallback(
+    async (isMounted?: boolean) => {
+      if (isStreaming) {
+        console.warn("Stream is already running");
+        return;
+      }
+
+      console.log("Starting MJPEG stream...");
+      setError(null);
+      try {
+        await startStream();
+        const response = await getStatus();
+        if (!response || !response.stream_url) {
+          throw new Error("Stream URL not returned from startStream");
+        }
+        setStreamURL(response.stream_url);
+        console.log("MJPEG stream started successfully");
+      } catch (err) {
+        console.error("Failed to start MJPEG stream:", err);
+        setError("Failed to start MJPEG stream");
+        if (isMounted) {
+          setError("Failed to auto-start stream");
+        }
+        return;
+      }
+    },
+    [getStatus, isStreaming, setStreamURL, startStream]
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -65,18 +99,13 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
     if (autoPlay && !hasAutoStarted && !isStreaming && mounted) {
       setHasAutoStarted(true);
       console.log("Auto-starting MJPEG stream...");
-      startStream().catch((error) => {
-        console.error("Auto-start failed:", error);
-        if (mounted) {
-          setError("Failed to auto-start stream");
-        }
-      });
+      handleStartStream(mounted);
     }
 
     return () => {
       mounted = false;
     };
-  }, [autoPlay, hasAutoStarted, isStreaming, startStream]);
+  }, [autoPlay, handleStartStream, hasAutoStarted, isStreaming]);
 
   // Simple refresh function
   const refreshStream = async () => {
@@ -169,6 +198,12 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
           document.msFullscreenElement
       );
       setIsFullscreen(isCurrentlyFullscreen);
+      if (!isCurrentlyFullscreen) {
+        if (isOverlayMode) {
+          // If exiting fullscreen in overlay mode, close the overlay
+          onOverlayClose?.();
+        }
+      }
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
@@ -191,7 +226,7 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
         handleFullscreenChange
       );
     };
-  }, []);
+  }, [isOverlayMode, onOverlayClose]);
 
   return (
     <Stack spacing={2}>
@@ -235,21 +270,23 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
               bottom={0}
               zIndex={9999}
               sx={{
-                backdropFilter: "blur(3px)",
-                background:
-                  "linear-gradient(45deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.4) 100%)",
+                backdropFilter: isOverlayMode ? "blur(3px)" : "none",
+                background: isOverlayMode
+                  ? "linear-gradient(45deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.4) 100%)"
+                  : "transparent",
               }}
             >
               <OverlayComponent
                 open={overlayOpen}
                 onClose={onOverlayClose || (() => {})}
                 orientation={isFullscreen ? "landscape" : "auto"}
+                isOverlayMode={isOverlayMode}
               />
             </Box>
           )}
 
-          {/* Show loading text when no stream URL */}
-          {!streamURL && (
+          {/* Show loading skeleton when no stream URL and no error */}
+          {!streamURL && !error && (
             <Box
               position="absolute"
               top={0}
@@ -259,11 +296,13 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
               display="flex"
               alignItems="center"
               justifyContent="center"
-              bgcolor="rgba(0,0,0,0.8)"
+              bgcolor="rgba(0,0,0,0.9)"
             >
-              <Typography variant="h6" color="white">
-                {isStreaming ? "Loading stream..." : "No stream available"}
-              </Typography>
+              <SkeletonLoader
+                variant="stream-player"
+                width="100%"
+                height="100%"
+              />
             </Box>
           )}
 
@@ -307,30 +346,28 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Tooltip title="Refresh Stream">
                     <IconButton onClick={refreshStream} size="small">
-                      <Refresh fontSize="inherit" />
+                      <Refresh />
                     </IconButton>
                   </Tooltip>
                 </Stack>
 
                 <Stack direction="row" spacing={1}>
-                  {onCameraOverlay && (
+                  {onCameraOverlay && streamURL && isFullscreen && (
                     <Tooltip title="Camera Controls">
                       <IconButton onClick={onCameraOverlay} size="small">
-                        <CameraAlt fontSize="inherit" />
+                        <CameraAlt />
                       </IconButton>
                     </Tooltip>
                   )}
-                  <Tooltip
-                    title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                  >
-                    <IconButton onClick={toggleFullscreen} size="small">
-                      {isFullscreen ? (
-                        <FullscreenExit fontSize="inherit" />
-                      ) : (
-                        <Fullscreen fontSize="inherit" />
-                      )}
-                    </IconButton>
-                  </Tooltip>
+                  {streamURL && (
+                    <Tooltip
+                      title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                    >
+                      <IconButton onClick={toggleFullscreen} size="small">
+                        {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
+                      </IconButton>
+                    </Tooltip>
+                  )}
                 </Stack>
               </Stack>
             </Box>
@@ -340,10 +377,10 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
           {controls && streamURL && !error && (
             <Box position="absolute" bottom={0} right={0}>
               <Stack direction="row" spacing={1} p={1}>
-                {onCameraOverlay && (
+                {onCameraOverlay && isFullscreen && (
                   <Tooltip title="Camera Controls">
                     <IconButton onClick={onCameraOverlay} size="small">
-                      <CameraAlt fontSize="inherit" />
+                      <CameraAlt />
                     </IconButton>
                   </Tooltip>
                 )}
@@ -351,11 +388,7 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
                   title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                 >
                   <IconButton onClick={toggleFullscreen} size="small">
-                    {isFullscreen ? (
-                      <FullscreenExit fontSize="inherit" />
-                    ) : (
-                      <Fullscreen fontSize="inherit" />
-                    )}
+                    {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
                   </IconButton>
                 </Tooltip>
               </Stack>
@@ -367,4 +400,4 @@ const MjpegPlayer: React.FC<MjpegPlayerProps> = ({
   );
 };
 
-export default MjpegPlayer;
+export default Player;

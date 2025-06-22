@@ -21,6 +21,14 @@ const isLocalhost = Boolean(
 );
 
 export function register(config) {
+  // Don't register service worker in development mode
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('Service worker registration skipped in development mode');
+    // Clear any existing caches from previous sessions
+    clearAllCaches();
+    return;
+  }
+
   if ('serviceWorker' in navigator) {
     const publicUrl = new URL(process.env.PUBLIC_URL, window.location.href);
     if (publicUrl.origin !== window.location.origin) {
@@ -51,6 +59,23 @@ export function register(config) {
         // Is not localhost. Just register service worker
         registerValidSW(swUrl, config);
       }
+    });
+  }
+}
+
+// Function to clear all caches (for development mode)
+function clearAllCaches() {
+  if ('caches' in window) {
+    caches.keys().then((cacheNames) => {
+      const deletePromises = cacheNames.map((cacheName) => {
+        console.log('Clearing cache:', cacheName);
+        return caches.delete(cacheName);
+      });
+      return Promise.all(deletePromises);
+    }).then(() => {
+      console.log('All caches cleared for development mode');
+    }).catch((error) => {
+      console.error('Error clearing caches:', error);
     });
   }
 }
@@ -158,4 +183,4 @@ export function unregister() {
 }
 
 // Export for manual cache clearing
-export { clearStreamCaches };
+export { clearStreamCaches, clearAllCaches };

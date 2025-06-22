@@ -1,5 +1,5 @@
 import type React from "react";
-import { Stack, IconButton, Card, CardContent } from "@mui/material";
+import { Stack, IconButton, Card, CardContent, Avatar } from "@mui/material";
 import {
   ArrowBack,
   ArrowDownward,
@@ -8,18 +8,22 @@ import {
   Home,
 } from "@mui/icons-material";
 import { useAppContext } from "../contexts/AppContext";
-import { useAutoDismissError, useCameraControl } from "../hooks";
+import { useAutoDismissError } from "../hooks";
+import type { MovementDirection } from "../types/api";
+import SkeletonLoader from "./SkeletonLoader";
 
 const MovementControls: React.FC = () => {
-  const { selectedCamera } = useAppContext();
+  const { selectedCamera, moveCamera, getCameraData } = useAppContext();
   const { setError } = useAutoDismissError();
-  const { loading, moveCamera } = useCameraControl(selectedCamera);
 
-  const handleMove = async (direction: string) => {
+  const cameraData = selectedCamera ? getCameraData(selectedCamera) : null;
+  const loading = cameraData?.isLoading || false;
+
+  const handleMove = async (direction: MovementDirection) => {
     if (!selectedCamera) return;
 
     try {
-      await moveCamera(direction);
+      await moveCamera(selectedCamera, direction);
     } catch (err) {
       console.error("Movement error:", err);
       setError("Failed to move camera.");
@@ -29,52 +33,66 @@ const MovementControls: React.FC = () => {
   return (
     <Card>
       <CardContent>
-        <Stack spacing={1} alignItems="center">
-          {/* Up arrow */}
-          <IconButton
-            onClick={() => handleMove("up")}
-            color="primary"
-            size="large"
-            disabled={loading}
-          >
-            <ArrowUpward />
-          </IconButton>
-
-          {/* Left, Home, Right */}
-          <Stack direction="row" spacing={1} alignItems="center">
+        {!selectedCamera ? (
+          <SkeletonLoader variant="movement-controls" />
+        ) : (
+          <Stack spacing={1} alignItems="center">
+            {/* Up arrow */}
             <IconButton
-              onClick={() => handleMove("left")}
+              onClick={() => handleMove("up")}
               color="primary"
               size="large"
               disabled={loading}
             >
-              <ArrowBack />
+              <Avatar sx={{ bgcolor: "primary.main" }}>
+                <ArrowUpward />
+              </Avatar>
             </IconButton>
 
-            <IconButton size="large" disabled>
-              <Home />
-            </IconButton>
+            {/* Left, Home, Right */}
+            <Stack direction="row" spacing={1} alignItems="center">
+              <IconButton
+                onClick={() => handleMove("left")}
+                color="primary"
+                size="large"
+                disabled={loading}
+              >
+                <Avatar sx={{ bgcolor: "primary.main" }}>
+                  <ArrowBack />
+                </Avatar>
+              </IconButton>
 
+              <IconButton size="large" disabled>
+                <Avatar sx={{ bgcolor: "primary.main" }}>
+                  <Home />
+                </Avatar>
+              </IconButton>
+
+              <IconButton
+                onClick={() => handleMove("right")}
+                color="primary"
+                size="large"
+                disabled={loading}
+              >
+                <Avatar sx={{ bgcolor: "primary.main" }}>
+                  <ArrowForward />
+                </Avatar>
+              </IconButton>
+            </Stack>
+
+            {/* Down arrow */}
             <IconButton
-              onClick={() => handleMove("right")}
+              onClick={() => handleMove("down")}
               color="primary"
               size="large"
               disabled={loading}
             >
-              <ArrowForward />
+              <Avatar sx={{ bgcolor: "primary.main" }}>
+                <ArrowDownward />
+              </Avatar>
             </IconButton>
           </Stack>
-
-          {/* Down arrow */}
-          <IconButton
-            onClick={() => handleMove("down")}
-            color="primary"
-            size="large"
-            disabled={loading}
-          >
-            <ArrowDownward />
-          </IconButton>
-        </Stack>
+        )}
       </CardContent>
     </Card>
   );
