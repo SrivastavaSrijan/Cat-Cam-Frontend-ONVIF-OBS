@@ -23,11 +23,12 @@ export const useCameraControl = (): UseCameraControlReturn => {
         const result = await apiCall();
         return result;
       } catch (err) {
-        const errorMessage = err instanceof ApiClientError 
-          ? err.message 
-          : err instanceof Error 
-          ? err.message 
-          : "An unknown error occurred";
+        const errorMessage =
+          err instanceof ApiClientError
+            ? err.message
+            : err instanceof Error
+            ? err.message
+            : "An unknown error occurred";
         setError(errorMessage);
         throw err;
       } finally {
@@ -57,8 +58,7 @@ export const useCameraControl = (): UseCameraControlReturn => {
   );
 
   const getAllCameras = useCallback(
-    (): Promise<CameraInfo[]> =>
-      handleApiCall(() => apiClient.getAllCameras()),
+    (): Promise<CameraInfo[]> => handleApiCall(() => apiClient.getAllCameras()),
     [handleApiCall]
   );
 
@@ -75,13 +75,23 @@ export const useCameraControl = (): UseCameraControlReturn => {
   );
 
   const moveCamera = useCallback(
-    (nickname: string, direction: MovementDirection, velocityFactor?: number): Promise<void> =>
-      handleApiCall(() => apiClient.moveCamera(nickname, direction, velocityFactor)),
+    (
+      nickname: string,
+      direction: MovementDirection,
+      velocityFactor?: number
+    ): Promise<void> =>
+      handleApiCall(() =>
+        apiClient.moveCamera(nickname, direction, velocityFactor)
+      ),
     [handleApiCall]
   );
 
   const continuousMove = useCallback(
-    (nickname: string, direction: MovementDirection, speed?: number): Promise<void> =>
+    (
+      nickname: string,
+      direction: MovementDirection,
+      speed?: number
+    ): Promise<void> =>
       handleApiCall(() => apiClient.continuousMove(nickname, direction, speed)),
     [handleApiCall]
   );
@@ -93,8 +103,14 @@ export const useCameraControl = (): UseCameraControlReturn => {
   );
 
   const setMovementSpeed = useCallback(
-    (nickname: string, panTiltSpeed?: number, zoomSpeed?: number): Promise<void> =>
-      handleApiCall(() => apiClient.setMovementSpeed(nickname, panTiltSpeed, zoomSpeed)),
+    (
+      nickname: string,
+      panTiltSpeed?: number,
+      zoomSpeed?: number
+    ): Promise<void> =>
+      handleApiCall(() =>
+        apiClient.setMovementSpeed(nickname, panTiltSpeed, zoomSpeed)
+      ),
     [handleApiCall]
   );
 

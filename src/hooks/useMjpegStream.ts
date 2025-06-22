@@ -20,11 +20,12 @@ export const useMjpegStream = (): UseMjpegStreamReturn => {
         const result = await apiCall();
         return result;
       } catch (err) {
-        const errorMessage = err instanceof ApiClientError 
-          ? err.message 
-          : err instanceof Error 
-          ? err.message 
-          : "An unknown error occurred";
+        const errorMessage =
+          err instanceof ApiClientError
+            ? err.message
+            : err instanceof Error
+            ? err.message
+            : "An unknown error occurred";
         setError(errorMessage);
         throw err;
       } finally {
@@ -48,14 +49,12 @@ export const useMjpegStream = (): UseMjpegStreamReturn => {
   );
 
   const startStream = useCallback(
-    (): Promise<void> =>
-      handleApiCall(() => apiClient.startMjpegStream()),
+    (): Promise<void> => handleApiCall(() => apiClient.startMjpegStream()),
     [handleApiCall]
   );
 
   const stopStream = useCallback(
-    (): Promise<void> =>
-      handleApiCall(() => apiClient.stopMjpegStream()),
+    (): Promise<void> => handleApiCall(() => apiClient.stopMjpegStream()),
     [handleApiCall]
   );
 

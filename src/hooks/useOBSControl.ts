@@ -22,11 +22,12 @@ export const useOBSControl = (): UseOBSControlReturn => {
         const result = await apiCall();
         return result;
       } catch (err) {
-        const errorMessage = err instanceof ApiClientError 
-          ? err.message 
-          : err instanceof Error 
-          ? err.message 
-          : "An unknown error occurred";
+        const errorMessage =
+          err instanceof ApiClientError
+            ? err.message
+            : err instanceof Error
+            ? err.message
+            : "An unknown error occurred";
         setError(errorMessage);
         throw err;
       } finally {
@@ -38,8 +39,7 @@ export const useOBSControl = (): UseOBSControlReturn => {
 
   // OBS operations
   const getScenes = useCallback(
-    (): Promise<Scene[]> =>
-      handleApiCall(() => apiClient.getScenes()),
+    (): Promise<Scene[]> => handleApiCall(() => apiClient.getScenes()),
     [handleApiCall]
   );
 
@@ -68,20 +68,17 @@ export const useOBSControl = (): UseOBSControlReturn => {
   );
 
   const reconnect = useCallback(
-    (): Promise<void> =>
-      handleApiCall(() => apiClient.reconnectOBS()),
+    (): Promise<void> => handleApiCall(() => apiClient.reconnectOBS()),
     [handleApiCall]
   );
 
   const startVirtualCamera = useCallback(
-    (): Promise<void> =>
-      handleApiCall(() => apiClient.startVirtualCamera()),
+    (): Promise<void> => handleApiCall(() => apiClient.startVirtualCamera()),
     [handleApiCall]
   );
 
   const stopVirtualCamera = useCallback(
-    (): Promise<void> =>
-      handleApiCall(() => apiClient.stopVirtualCamera()),
+    (): Promise<void> => handleApiCall(() => apiClient.stopVirtualCamera()),
     [handleApiCall]
   );
 
@@ -98,8 +95,7 @@ export const useOBSControl = (): UseOBSControlReturn => {
   );
 
   const closeProjector = useCallback(
-    (): Promise<void> =>
-      handleApiCall(() => apiClient.closeProjector()),
+    (): Promise<void> => handleApiCall(() => apiClient.closeProjector()),
     [handleApiCall]
   );
 
