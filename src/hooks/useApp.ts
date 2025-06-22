@@ -1,39 +1,15 @@
 import { useState, useCallback, useRef, useMemo } from "react";
-import { useApi } from "./useApi";
+import { apiClient } from "../api/client";
 import { useNotification } from "./useNotification";
 import { useLoading } from "./useLoading";
+import type {
+  CameraStatus,
+  CameraInfo,
+  Preset,
+  MovementDirection,
+} from "../types/api";
 
-interface Preset {
-  Name: string;
-  Token: string;
-  PTZPosition?: {
-    PanTilt: { x: number; y: number };
-    Zoom: { x: number };
-  };
-}
-
-interface CameraStatus {
-  PTZPosition: {
-    PanTilt: { x: number; y: number };
-    Zoom: { x: number };
-  };
-  limits: {
-    x_max: number;
-    x_min: number;
-    y_max: number;
-    y_min: number;
-    max_velocity: number;
-  };
-}
-
-interface CameraInfo {
-  nickname: string;
-  host: string;
-  port: number;
-  status: "online" | "offline";
-  error?: string;
-}
-
+// Update interfaces to match our typed API
 export interface CameraData {
   presets: Preset[];
   selectedPreset: string | null;
@@ -42,7 +18,6 @@ export interface CameraData {
   error: string | null;
 }
 
-type CameraDataCallback = (data: CameraData) => void;
 export type StreamView = {
   layout_mode: "grid" | "highlight";
   highlighted_source?: string;
@@ -69,46 +44,10 @@ export const useAppData = () => {
 
   const { loading, withLoading } = useLoading();
   const { showError, showSuccess } = useNotification();
-  const api = useApi();
 
   const loadingRef = useRef<Set<string>>(new Set());
-  const callbacksRef = useRef<Record<string, Set<CameraDataCallback>>>({});
   const cameraListLoadingRef = useRef(false);
   const streamPlayerRef = useRef<HTMLImageElement>(null);
-
-  const subscribeToCamera = useCallback(
-    (nickname: string, callback: CameraDataCallback) => {
-      if (!callbacksRef.current[nickname]) {
-        callbacksRef.current[nickname] = new Set();
-      }
-      callbacksRef.current[nickname].add(callback);
-
-      // Return current data if available - get from current state, not dependency
-      setCameraData((currentData) => {
-        if (currentData[nickname]) {
-          callback(currentData[nickname]);
-        }
-        return currentData; // Don't change state, just read it
-      });
-
-      // Return unsubscribe function
-      return () => {
-        callbacksRef.current[nickname]?.delete(callback);
-      };
-    },
-    [] // No dependencies!
-  );
-
-  const notifySubscribers = useCallback(
-    (nickname: string, data: CameraData) => {
-      setCameraData((prev) => ({ ...prev, [nickname]: data }));
-      if (callbacksRef.current[nickname]) {
-        // biome-ignore lint/complexity/noForEach: <explanation>
-        callbacksRef.current[nickname].forEach((callback) => callback(data));
-      }
-    },
-    []
-  );
 
   const loadCameraData = useCallback(
     async (nickname: string) => {
@@ -124,21 +63,21 @@ export const useAppData = () => {
         isLoading: true,
         error: null,
       };
-      notifySubscribers(nickname, loadingData);
+      setCameraData((prev) => ({ ...prev, [nickname]: loadingData }));
 
       try {
-        // Fetch status
-        const status = await withLoading(() => api.getCameraStatus(nickname));
-        const cameraStatus = status as CameraStatus;
+        // Fetch status using typed API client
+        const cameraStatus = await withLoading(() =>
+          apiClient.getCameraStatus(nickname)
+        );
 
-        // Fetch presets
-        const presetResponse = await withLoading(() =>
-          api.getCameraPresets(nickname)
+        // Fetch presets using typed API client
+        const presets = await withLoading(() =>
+          apiClient.getCameraPresets(nickname)
         );
-        const response = presetResponse as { presets: Preset[] };
-        const cleanedPresets = (response.presets || []).filter(
-          (preset) => preset?.PTZPosition
-        );
+
+        // Filter presets that have position data
+        const cleanedPresets = presets.filter((preset) => preset?.PTZPosition);
 
         // Auto-select preset based on current position
         let selectedPreset: string | null = null;
@@ -161,7 +100,7 @@ export const useAppData = () => {
           isLoading: false,
           error: null,
         };
-        notifySubscribers(nickname, successData);
+        setCameraData((prev) => ({ ...prev, [nickname]: successData }));
       } catch (error) {
         const errorData: CameraData = {
           presets: [],
@@ -173,7 +112,7 @@ export const useAppData = () => {
               ? error.message
               : "Failed to load camera data",
         };
-        notifySubscribers(nickname, errorData);
+        setCameraData((prev) => ({ ...prev, [nickname]: errorData }));
         showError(
           `Failed to load data for ${nickname}: ${
             error instanceof Error ? error.message : "Unknown error"
@@ -183,7 +122,7 @@ export const useAppData = () => {
         loadingRef.current.delete(nickname);
       }
     },
-    [api, withLoading, showError, notifySubscribers, cameraData]
+    [withLoading, showError, cameraData]
   );
 
   const gotoPreset = useCallback(
@@ -194,14 +133,14 @@ export const useAppData = () => {
       if (!currentData || presetToken === currentData.selectedPreset) return;
 
       try {
-        await api.gotoPreset(nickname, presetToken);
+        await apiClient.gotoPreset(nickname, presetToken);
 
         // Update selected preset
         const updatedData: CameraData = {
           ...currentData,
           selectedPreset: presetToken,
         };
-        notifySubscribers(nickname, updatedData);
+        setCameraData((prev) => ({ ...prev, [nickname]: updatedData }));
 
         const preset = currentData.presets.find((p) => p.Token === presetToken);
         showSuccess(`Moved to preset: ${preset?.Name || "Unknown"}`);
@@ -212,24 +151,24 @@ export const useAppData = () => {
           ...currentData,
           selectedPreset: null,
         };
-        notifySubscribers(nickname, updatedData);
+        setCameraData((prev) => ({ ...prev, [nickname]: updatedData }));
       }
     },
-    [api, cameraData, notifySubscribers, showSuccess, showError]
+    [cameraData, showSuccess, showError]
   );
 
   const startContinuousMove = useCallback(
-    async (nickname: string, direction: string) => {
+    async (nickname: string, direction: MovementDirection) => {
       if (!nickname || isContinuousMoving[nickname]) return;
 
       try {
-        await api.continuousMove(nickname, direction);
+        await apiClient.continuousMove(nickname, direction);
         setIsContinuousMoving((prev) => ({ ...prev, [nickname]: true }));
       } catch (error) {
         showError("Failed to start movement");
       }
     },
-    [api, isContinuousMoving, showError]
+    [isContinuousMoving, showError]
   );
 
   const stopContinuousMove = useCallback(
@@ -237,26 +176,30 @@ export const useAppData = () => {
       if (!nickname) return;
 
       try {
-        await api.stopMove(nickname);
+        await apiClient.stopMove(nickname);
         setIsContinuousMoving((prev) => ({ ...prev, [nickname]: false }));
       } catch (error) {
         showError("Failed to stop movement");
       }
     },
-    [api, showError]
+    [showError]
   );
 
   const moveCamera = useCallback(
-    async (nickname: string, direction: string, velocityFactor = 1) => {
+    async (
+      nickname: string,
+      direction: MovementDirection,
+      velocityFactor = 1
+    ) => {
       if (!nickname) return;
 
       try {
-        await api.moveCamera(nickname, direction, velocityFactor);
+        await apiClient.moveCamera(nickname, direction, velocityFactor);
       } catch (error) {
         showError("Failed to move camera");
       }
     },
-    [api, showError]
+    [showError]
   );
 
   const getCameraData = useCallback(
@@ -284,16 +227,16 @@ export const useAppData = () => {
     cameraListLoadingRef.current = true;
 
     try {
-      const response = await api.getAllCameras();
-      const data = response as { cameras: CameraInfo[] };
-      const cameras = data.cameras || [];
+      const cameras = await apiClient.getAllCameras();
 
       setAllCameras(cameras);
       setCamerasLoaded(true);
 
       // Check current OBS transformation to see if a camera is already highlighted
       try {
-        const currentStreamView = await withLoading(() => api.obsStreamView());
+        const currentStreamView = await withLoading(() =>
+          apiClient.getTransformationState()
+        );
         selectStreamView(currentStreamView);
         if (currentStreamView?.layout_mode === "highlight") {
           // Check if the highlighted source corresponds to an online camera
@@ -339,14 +282,7 @@ export const useAppData = () => {
     } finally {
       cameraListLoadingRef.current = false;
     }
-  }, [
-    api,
-    camerasLoaded,
-    selectStreamView,
-    selectedCamera,
-    showError,
-    withLoading,
-  ]);
+  }, [camerasLoaded, selectStreamView, selectedCamera, showError, withLoading]);
 
   const selectCamera = useCallback((nickname: string) => {
     setSelectedCamera(nickname);
@@ -365,7 +301,6 @@ export const useAppData = () => {
   return useMemo(
     () => ({
       // Camera data management
-      subscribeToCamera,
       loadCameraData,
       gotoPreset,
       startContinuousMove,
@@ -399,7 +334,6 @@ export const useAppData = () => {
       streamPlayerRef,
     }),
     [
-      subscribeToCamera,
       loadCameraData,
       gotoPreset,
       startContinuousMove,

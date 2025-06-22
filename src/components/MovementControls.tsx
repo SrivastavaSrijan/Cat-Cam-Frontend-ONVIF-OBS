@@ -8,18 +8,21 @@ import {
   Home,
 } from "@mui/icons-material";
 import { useAppContext } from "../contexts/AppContext";
-import { useAutoDismissError, useCameraControl } from "../hooks";
+import { useAutoDismissError } from "../hooks";
+import type { MovementDirection } from "../types/api";
 
 const MovementControls: React.FC = () => {
-  const { selectedCamera } = useAppContext();
+  const { selectedCamera, moveCamera, getCameraData } = useAppContext();
   const { setError } = useAutoDismissError();
-  const { loading, moveCamera } = useCameraControl(selectedCamera);
 
-  const handleMove = async (direction: string) => {
+  const cameraData = selectedCamera ? getCameraData(selectedCamera) : null;
+  const loading = cameraData?.isLoading || false;
+
+  const handleMove = async (direction: MovementDirection) => {
     if (!selectedCamera) return;
 
     try {
-      await moveCamera(direction);
+      await moveCamera(selectedCamera, direction);
     } catch (err) {
       console.error("Movement error:", err);
       setError("Failed to move camera.");

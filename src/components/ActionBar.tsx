@@ -8,7 +8,7 @@ import {
   WbSunny,
 } from "@mui/icons-material";
 import { useAppContext } from "../contexts/AppContext";
-import { useApi, useOBSControl, useAutoDismissError } from "../hooks";
+import { useCameraControl, useOBSControl, useAutoDismissError } from "../hooks";
 
 const ActionBar: React.FC = () => {
   const [nightMode, setNightMode] = useState<boolean | undefined>(undefined);
@@ -16,25 +16,24 @@ const ActionBar: React.FC = () => {
 
   const { selectedCamera, streamView } = useAppContext();
   const { error, setError } = useAutoDismissError();
-  const { switchStreamView } = useOBSControl();
-  const api = useApi();
+  const obsControl = useOBSControl();
+  const cameraControl = useCameraControl();
+
   // Check night mode status
   const checkNightMode = useCallback(async () => {
     if (!selectedCamera) return;
 
     setNightModeLoading(true);
     try {
-      const data = await api.getCameraImaging(selectedCamera);
-      const actualNightMode =
-        (data as { imaging?: { brightness?: number } })?.imaging?.brightness ===
-        0;
+      const data = await cameraControl.getCameraImaging(selectedCamera);
+      const actualNightMode = data?.brightness === 0;
       setNightMode(actualNightMode);
     } catch (error) {
       console.error("Failed to check night mode status:", error);
     } finally {
       setNightModeLoading(false);
     }
-  }, [selectedCamera, api]);
+  }, [selectedCamera, cameraControl]);
 
   // Handle night mode toggle
   const handleNightModeToggle = useCallback(async () => {
@@ -44,7 +43,7 @@ const ActionBar: React.FC = () => {
     setNightModeLoading(true);
 
     try {
-      await api.toggleNightMode(selectedCamera, newNightMode);
+      await cameraControl.toggleNightMode(selectedCamera, newNightMode);
       setNightMode(newNightMode);
       setError(null);
     } catch (error) {
@@ -53,7 +52,23 @@ const ActionBar: React.FC = () => {
     } finally {
       setNightModeLoading(false);
     }
-  }, [selectedCamera, nightMode, nightModeLoading, api, setError]);
+  }, [selectedCamera, nightMode, nightModeLoading, cameraControl, setError]);
+
+  // Handle stream view switching
+  const handleStreamViewChange = useCallback(
+    async (newView: "grid" | "highlight") => {
+      try {
+        await obsControl.applyTransformation(
+          newView,
+          selectedCamera || undefined
+        );
+      } catch (error) {
+        console.error("Failed to switch stream view:", error);
+        setError("Failed to switch stream view");
+      }
+    },
+    [obsControl, selectedCamera, setError]
+  );
 
   // Check night mode when camera changes
   useEffect(() => {
@@ -77,7 +92,7 @@ const ActionBar: React.FC = () => {
         exclusive
         onChange={(_, newView) => {
           if (newView) {
-            switchStreamView(newView, selectedCamera || undefined);
+            handleStreamViewChange(newView);
           }
         }}
         size="small"

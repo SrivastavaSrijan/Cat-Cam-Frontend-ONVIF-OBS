@@ -9,14 +9,11 @@ import {
   Card,
   CardContent,
   Fade,
-  ToggleButton,
-  ToggleButtonGroup,
 } from "@mui/material";
 import {
   Close,
   SwipeVertical,
   TouchApp,
-  CameraAlt,
   PanTool,
   Info,
   KeyboardArrowLeft,
@@ -90,7 +87,6 @@ const CameraOverlay: React.FC<CameraOverlayProps> = ({
 }) => {
   const {
     cameraMode,
-    setCameraMode,
     swipeIndicator,
     helpAnchorEl,
     selectedCamera,

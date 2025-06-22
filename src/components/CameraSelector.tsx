@@ -20,7 +20,7 @@ const CameraSelector: React.FC = () => {
     isLoadingCameras,
   } = useAppContext();
 
-  const { switchStreamView } = useOBSControl();
+  const { applyTransformation } = useOBSControl();
 
   // Load cameras when component first renders
   if (allCameras.length === 0 && !isLoadingCameras) {
@@ -32,7 +32,7 @@ const CameraSelector: React.FC = () => {
     const cameraData = allCameras.find((c) => c.nickname === camera);
     if (cameraData?.status === "online") {
       selectCamera(camera);
-      switchStreamView("highlight", cameraData.nickname);
+      applyTransformation("highlight", cameraData.nickname);
     }
   };
 

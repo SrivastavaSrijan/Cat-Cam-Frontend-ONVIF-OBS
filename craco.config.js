@@ -4,12 +4,15 @@ module.exports = {
   webpack: {
     plugins: {
       add: [
-        new InjectManifest({
-          swSrc: './public/sw.js',
-          dontCacheBustURLsMatching: /\.\w{8}\./,
-          exclude: [/\.map$/, /manifest$/, /\.htaccess$/],
-          maximumFileSizeToCacheInBytes: 5000000,
-        }),
+        // Only inject service worker in production builds
+        ...(process.env.NODE_ENV === 'production' ? [
+          new InjectManifest({
+            swSrc: './public/sw.js',
+            dontCacheBustURLsMatching: /\.\w{8}\./,
+            exclude: [/\.map$/, /manifest$/, /\.htaccess$/],
+            maximumFileSizeToCacheInBytes: 5000000,
+          }),
+        ] : []),
       ],
     },
   },

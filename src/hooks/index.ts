@@ -1,6 +1,5 @@
 export { useNotification, type NotificationState } from "./useNotification";
 export { useLoading } from "./useLoading";
-export { useApi } from "./useApi";
 export { useCameraControl } from "./useCameraControl";
 export { useAppData } from "./useApp";
 export { useOBSControl } from "./useOBSControl";

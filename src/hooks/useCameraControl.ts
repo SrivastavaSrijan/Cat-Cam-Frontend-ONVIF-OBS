@@ -1,142 +1,124 @@
-import { useState, useEffect, useCallback } from "react";
-import { useAppContext, type CameraData } from "../contexts/AppContext";
+import { useState, useCallback } from "react";
+import { apiClient, ApiClientError } from "../api/client";
+import type {
+  CameraStatus,
+  CameraInfo,
+  Preset,
+  ImagingSettings,
+  MovementDirection,
+  UseCameraControlReturn,
+} from "../types/api";
 
-interface Preset {
-  Name: string;
-  Token: string;
-  PTZPosition?: {
-    PanTilt: { x: number; y: number };
-    Zoom: { x: number };
-  };
-}
+export const useCameraControl = (): UseCameraControlReturn => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-interface CameraStatus {
-  PTZPosition: {
-    PanTilt: { x: number; y: number };
-    Zoom: { x: number };
-  };
-  limits: {
-    x_max: number;
-    x_min: number;
-    y_max: number;
-    y_min: number;
-    max_velocity: number;
-  };
-}
+  const clearError = useCallback(() => setError(null), []);
 
-export const useCameraControl = (nickname: string | null) => {
-  const [data, setData] = useState<{
-    presets: Preset[];
-    selectedPreset: string | null;
-    status: CameraStatus | null;
-    isLoading: boolean;
-    error: string | null;
-  }>({
-    presets: [],
-    selectedPreset: null,
-    status: null,
-    isLoading: false,
-    error: null,
-  });
-
-  const {
-    subscribeToCamera,
-    getCameraData,
-    loadCameraData,
-    gotoPreset: managerGotoPreset,
-    startContinuousMove: managerStartContinuousMove,
-    stopContinuousMove: managerStopContinuousMove,
-    moveCamera: managerMoveCamera,
-    isCameraMoving,
-  } = useAppContext();
-
-  // Subscribe to camera data when nickname changes
-  useEffect(() => {
-    if (!nickname) {
-      setData({
-        presets: [],
-        selectedPreset: null,
-        status: null,
-        isLoading: false,
-        error: null,
-      });
-      return;
-    }
-
-    // Subscribe to updates
-    const unsubscribe = subscribeToCamera(
-      nickname,
-      (cameraData: CameraData) => {
-        setData(cameraData);
+  const handleApiCall = useCallback(
+    async <T>(apiCall: () => Promise<T>): Promise<T> => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await apiCall();
+        return result;
+      } catch (err) {
+        const errorMessage = err instanceof ApiClientError 
+          ? err.message 
+          : err instanceof Error 
+          ? err.message 
+          : "An unknown error occurred";
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setLoading(false);
       }
-    );
+    },
+    []
+  );
 
-    // Load data if not already loaded
-    const existingData = getCameraData(nickname);
-    if (
-      !existingData ||
-      (existingData.presets.length === 0 &&
-        !existingData.isLoading &&
-        !existingData.error)
-    ) {
-      loadCameraData(nickname);
-    }
+  // Camera operations
+  const getCameraStatus = useCallback(
+    (nickname: string): Promise<CameraStatus> =>
+      handleApiCall(() => apiClient.getCameraStatus(nickname)),
+    [handleApiCall]
+  );
 
-    return unsubscribe;
-  }, [nickname, subscribeToCamera, getCameraData, loadCameraData]);
+  const getCameraPresets = useCallback(
+    (nickname: string): Promise<Preset[]> =>
+      handleApiCall(() => apiClient.getCameraPresets(nickname)),
+    [handleApiCall]
+  );
+
+  const getCameraImaging = useCallback(
+    (nickname: string): Promise<ImagingSettings> =>
+      handleApiCall(() => apiClient.getCameraImaging(nickname)),
+    [handleApiCall]
+  );
+
+  const getAllCameras = useCallback(
+    (): Promise<CameraInfo[]> =>
+      handleApiCall(() => apiClient.getAllCameras()),
+    [handleApiCall]
+  );
+
+  const switchCamera = useCallback(
+    (nickname: string): Promise<void> =>
+      handleApiCall(() => apiClient.switchCamera(nickname)),
+    [handleApiCall]
+  );
 
   const gotoPreset = useCallback(
-    (presetToken: string) => {
-      if (nickname) {
-        return managerGotoPreset(nickname, presetToken);
-      }
-    },
-    [nickname, managerGotoPreset]
+    (nickname: string, presetToken: string): Promise<void> =>
+      handleApiCall(() => apiClient.gotoPreset(nickname, presetToken)),
+    [handleApiCall]
   );
-
-  const startContinuousMove = useCallback(
-    (direction: string) => {
-      if (nickname) {
-        return managerStartContinuousMove(nickname, direction);
-      }
-    },
-    [nickname, managerStartContinuousMove]
-  );
-
-  const stopContinuousMove = useCallback(() => {
-    if (nickname) {
-      return managerStopContinuousMove(nickname);
-    }
-  }, [nickname, managerStopContinuousMove]);
 
   const moveCamera = useCallback(
-    (direction: string, velocityFactor = 1) => {
-      if (nickname) {
-        return managerMoveCamera(nickname, direction, velocityFactor);
-      }
-    },
-    [nickname, managerMoveCamera]
+    (nickname: string, direction: MovementDirection, velocityFactor?: number): Promise<void> =>
+      handleApiCall(() => apiClient.moveCamera(nickname, direction, velocityFactor)),
+    [handleApiCall]
   );
 
-  const refresh = useCallback(() => {
-    if (nickname) {
-      return loadCameraData(nickname);
-    }
-  }, [nickname, loadCameraData]);
+  const continuousMove = useCallback(
+    (nickname: string, direction: MovementDirection, speed?: number): Promise<void> =>
+      handleApiCall(() => apiClient.continuousMove(nickname, direction, speed)),
+    [handleApiCall]
+  );
 
-  const isContinuousMoving = nickname ? isCameraMoving(nickname) : false;
+  const stopMove = useCallback(
+    (nickname: string): Promise<void> =>
+      handleApiCall(() => apiClient.stopMove(nickname)),
+    [handleApiCall]
+  );
+
+  const setMovementSpeed = useCallback(
+    (nickname: string, panTiltSpeed?: number, zoomSpeed?: number): Promise<void> =>
+      handleApiCall(() => apiClient.setMovementSpeed(nickname, panTiltSpeed, zoomSpeed)),
+    [handleApiCall]
+  );
+
+  const toggleNightMode = useCallback(
+    (nickname: string, enable: boolean): Promise<void> =>
+      handleApiCall(() => apiClient.toggleNightMode(nickname, enable)),
+    [handleApiCall]
+  );
 
   return {
-    presets: data.presets,
-    selectedPreset: data.selectedPreset,
-    currentStatus: data.status,
-    loading: data.isLoading,
-    error: data.error,
-    isContinuousMoving,
+    loading,
+    error,
+    clearError,
+    // Camera operations
+    getCameraStatus,
+    getCameraPresets,
+    getCameraImaging,
+    getAllCameras,
+    switchCamera,
     gotoPreset,
-    startContinuousMove,
-    stopContinuousMove,
     moveCamera,
-    refresh,
+    continuousMove,
+    stopMove,
+    setMovementSpeed,
+    toggleNightMode,
   };
 };

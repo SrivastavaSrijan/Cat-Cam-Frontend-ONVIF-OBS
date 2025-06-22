@@ -25,12 +25,7 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
     setAnchorEl(null);
   };
 
-  const {
-    refreshStreams,
-    reconnect,
-    loading: obsLoading,
-    isRefreshing,
-  } = useOBSControl();
+  const { reconnect, loading: obsLoading } = useOBSControl();
 
   return (
     <>
@@ -54,7 +49,7 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
         color="primary"
         size="small"
         onClick={handleMenuOpen}
-        disabled={obsLoading || isRefreshing}
+        disabled={obsLoading}
         sx={{
           position: "fixed",
           bottom: 16,
@@ -62,7 +57,7 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
           zIndex: 1000,
         }}
       >
-        {obsLoading || isRefreshing ? (
+        {obsLoading ? (
           <CircularProgress size={24} color="inherit" />
         ) : (
           <MoreVert />
@@ -85,10 +80,10 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
       >
         <MenuItem
           onClick={() => {
-            refreshStreams();
+            reconnect(); // Use reconnect instead of refreshStreams
             handleMenuClose();
           }}
-          disabled={obsLoading || isRefreshing}
+          disabled={obsLoading}
         >
           <ListItemIcon>
             <Restore fontSize="small" />
