@@ -126,9 +126,9 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
             {isVirtualCameraLoading ? (
               <CircularProgress size={18} />
             ) : virtualCameraStatus === "active" ? (
-              <Videocam fontSize="inherit" />
+              <Videocam />
             ) : (
-              <VideocamOff fontSize="inherit" />
+              <VideocamOff />
             )}
           </ToggleButton>
         </ToggleButtonGroup>
@@ -156,7 +156,7 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
               )
             }
           >
-            <Monitor fontSize="inherit" />
+            <Monitor />
           </ToggleButton>
           <ToggleButton
             value="secondary"
@@ -168,7 +168,7 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
               )
             }
           >
-            <Laptop fontSize="inherit" />
+            <Laptop />
           </ToggleButton>
           {projectorActive && (
             <ToggleButton
@@ -176,7 +176,7 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
               onClick={() => handleProjectorToggle(null)}
               disabled={projectorLoading}
             >
-              <Close fontSize="inherit" />
+              <Close />
             </ToggleButton>
           )}
         </ToggleButtonGroup>

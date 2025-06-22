@@ -42,7 +42,7 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
           zIndex: 1000,
         }}
       >
-        <Gesture />
+        <Gesture fontSize="medium" />
       </Fab>
 
       <Fab
@@ -60,7 +60,7 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
         {obsLoading ? (
           <CircularProgress size={24} color="inherit" />
         ) : (
-          <MoreVert />
+          <MoreVert fontSize="medium" />
         )}
       </Fab>
 
@@ -86,7 +86,7 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
           disabled={obsLoading}
         >
           <ListItemIcon>
-            <Restore fontSize="small" />
+            <Restore />
           </ListItemIcon>
           <ListItemText primary="Refresh" />
         </MenuItem>
@@ -98,7 +98,7 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
           disabled={obsLoading}
         >
           <ListItemIcon>
-            <Cable fontSize="small" />
+            <Cable />
           </ListItemIcon>
           <ListItemText primary="Reconnect" />
         </MenuItem>

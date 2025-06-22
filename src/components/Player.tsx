@@ -346,7 +346,7 @@ const Player: React.FC<PlayerProps> = ({
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Tooltip title="Refresh Stream">
                     <IconButton onClick={refreshStream} size="small">
-                      <Refresh fontSize="inherit" />
+                      <Refresh />
                     </IconButton>
                   </Tooltip>
                 </Stack>
@@ -355,7 +355,7 @@ const Player: React.FC<PlayerProps> = ({
                   {onCameraOverlay && streamURL && isFullscreen && (
                     <Tooltip title="Camera Controls">
                       <IconButton onClick={onCameraOverlay} size="small">
-                        <CameraAlt fontSize="inherit" />
+                        <CameraAlt />
                       </IconButton>
                     </Tooltip>
                   )}
@@ -364,11 +364,7 @@ const Player: React.FC<PlayerProps> = ({
                       title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                     >
                       <IconButton onClick={toggleFullscreen} size="small">
-                        {isFullscreen ? (
-                          <FullscreenExit fontSize="inherit" />
-                        ) : (
-                          <Fullscreen fontSize="inherit" />
-                        )}
+                        {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
                       </IconButton>
                     </Tooltip>
                   )}
@@ -384,7 +380,7 @@ const Player: React.FC<PlayerProps> = ({
                 {onCameraOverlay && isFullscreen && (
                   <Tooltip title="Camera Controls">
                     <IconButton onClick={onCameraOverlay} size="small">
-                      <CameraAlt fontSize="inherit" />
+                      <CameraAlt />
                     </IconButton>
                   </Tooltip>
                 )}
@@ -392,11 +388,7 @@ const Player: React.FC<PlayerProps> = ({
                   title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
                 >
                   <IconButton onClick={toggleFullscreen} size="small">
-                    {isFullscreen ? (
-                      <FullscreenExit fontSize="inherit" />
-                    ) : (
-                      <Fullscreen fontSize="inherit" />
-                    )}
+                    {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
                   </IconButton>
                 </Tooltip>
               </Stack>

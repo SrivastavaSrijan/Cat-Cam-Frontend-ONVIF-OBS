@@ -385,10 +385,10 @@ const ControllerOverlay: React.FC<CameraOverlayProps> = ({
       >
         <Stack direction="row" spacing={1}>
           <IconButton onClick={handleHelpClick} size="small">
-            <Info fontSize="inherit" />
+            <Info />
           </IconButton>
           <IconButton onClick={onClose} size="small">
-            <Close fontSize="inherit" />
+            <Close />
           </IconButton>
         </Stack>
       </Stack>

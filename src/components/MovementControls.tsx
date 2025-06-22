@@ -45,7 +45,7 @@ const MovementControls: React.FC = () => {
               disabled={loading}
             >
               <Avatar sx={{ bgcolor: "primary.main" }}>
-                <ArrowUpward fontSize="inherit" />
+                <ArrowUpward />
               </Avatar>
             </IconButton>
 
@@ -58,13 +58,13 @@ const MovementControls: React.FC = () => {
                 disabled={loading}
               >
                 <Avatar sx={{ bgcolor: "primary.main" }}>
-                  <ArrowBack fontSize="inherit" />
+                  <ArrowBack />
                 </Avatar>
               </IconButton>
 
               <IconButton size="large" disabled>
                 <Avatar sx={{ bgcolor: "primary.main" }}>
-                  <Home fontSize="inherit" />
+                  <Home />
                 </Avatar>
               </IconButton>
 
@@ -75,7 +75,7 @@ const MovementControls: React.FC = () => {
                 disabled={loading}
               >
                 <Avatar sx={{ bgcolor: "primary.main" }}>
-                  <ArrowForward fontSize="inherit" />
+                  <ArrowForward />
                 </Avatar>
               </IconButton>
             </Stack>
@@ -88,7 +88,7 @@ const MovementControls: React.FC = () => {
               disabled={loading}
             >
               <Avatar sx={{ bgcolor: "primary.main" }}>
-                <ArrowDownward fontSize="inherit" />
+                <ArrowDownward />
               </Avatar>
             </IconButton>
           </Stack>

@@ -103,10 +103,10 @@ const ActionBar: React.FC = () => {
             size="small"
           >
             <ToggleButton value="grid">
-              <GridView fontSize="inherit" />
+              <GridView />
             </ToggleButton>
             <ToggleButton value="highlight">
-              <CenterFocusStrong fontSize="inherit" />
+              <CenterFocusStrong />
             </ToggleButton>
           </ToggleButtonGroup>
 
@@ -122,10 +122,10 @@ const ActionBar: React.FC = () => {
             size="small"
           >
             <ToggleButton value="bright" disabled={nightModeLoading}>
-              <WbSunny fontSize="inherit" />
+              <WbSunny />
             </ToggleButton>
             <ToggleButton value="dark" disabled={nightModeLoading}>
-              <NightlightRound fontSize="inherit" />
+              <NightlightRound />
             </ToggleButton>
           </ToggleButtonGroup>
         </>

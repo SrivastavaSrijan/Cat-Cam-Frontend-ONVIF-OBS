@@ -6,11 +6,10 @@ import {
   Box,
   Typography,
   Stack,
-  useMediaQuery,
   Card,
   CardContent,
 } from "@mui/material";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { ThemeProvider } from "@mui/material/styles";
 import darkTheme from "./theme";
 import {
   Navbar,
@@ -32,32 +31,6 @@ import MovementControls from "./components/MovementControls";
 const App: React.FC = () => {
   const [value, setValue] = useState(1);
   const [cameraOverlayOpen, setCameraOverlayOpen] = useState(false);
-  const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
-
-  // Create simple theme
-  const theme = createTheme({
-    ...darkTheme,
-    palette: {
-      ...darkTheme.palette,
-      mode: prefersDarkMode ? "dark" : "light",
-    },
-    components: {
-      MuiPaper: {
-        styleOverrides: {
-          root: {
-            backgroundImage: "none",
-          },
-        },
-      },
-      MuiButton: {
-        styleOverrides: {
-          root: {
-            textTransform: "none",
-          },
-        },
-      },
-    },
-  });
 
   const handleChange = (event: React.SyntheticEvent, newValue: number) => {
     setValue(newValue);
@@ -117,7 +90,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <NotificationProvider>
         <AppProvider>
