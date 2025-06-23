@@ -89,8 +89,8 @@ export const useOBSControl = (): UseOBSControlReturn => {
   );
 
   const startProjector = useCallback(
-    (sourceName: string): Promise<void> =>
-      handleApiCall(() => apiClient.startProjector(sourceName)),
+    (sourceName: string, monitorIndex?: number): Promise<void> =>
+      handleApiCall(() => apiClient.startProjector(sourceName, monitorIndex)),
     [handleApiCall]
   );
 

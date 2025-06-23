@@ -15,7 +15,7 @@ export const useCameraOverlay = (open: boolean) => {
     selectCamera,
     loadCameraList,
     loadCameraData,
-    isLoadingCameras,
+    globalLoading: isLoadingCameras,
     getCameraData,
     gotoPreset,
     isCameraMoving,

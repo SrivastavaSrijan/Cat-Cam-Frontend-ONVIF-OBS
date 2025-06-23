@@ -19,13 +19,13 @@ const CameraSelector: React.FC = () => {
     selectCamera,
     loadCameraList,
     loadCameraData,
-    isLoadingCameras,
+    globalLoading,
   } = useAppContext();
 
   const { applyTransformation } = useOBSControl();
 
   // Load cameras when component first renders
-  if (allCameras.length === 0 && !isLoadingCameras) {
+  if (allCameras.length === 0 && !globalLoading) {
     loadCameraList();
   }
 
@@ -44,7 +44,7 @@ const CameraSelector: React.FC = () => {
       <CardContent>
         <Stack spacing={2}>
           <FormControl fullWidth>
-            {isLoadingCameras ? (
+            {globalLoading ? (
               <SkeletonLoader variant="camera-selector" />
             ) : (
               <Select

@@ -20,44 +20,18 @@ import SkeletonLoader from "./SkeletonLoader";
 const Status: React.FC = () => {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-  const {
-    selectedCamera,
-    allCameras,
-    getCameraData,
-    loadCameraList,
-    loadCameraData,
-  } = useAppContext();
+  const { selectedCamera, allCameras, getCameraData, loadCameraList } =
+    useAppContext();
   const { error, setError } = useAutoDismissError();
 
   // Get current camera data
   const cameraData = selectedCamera ? getCameraData(selectedCamera) : null;
   const currentStatus = cameraData?.status;
 
-  const fetchCurrentCameraStatus = useCallback(async () => {
-    if (!selectedCamera) return;
-
-    try {
-      await loadCameraData(selectedCamera);
-      setLastUpdate(new Date());
-      setError(null);
-    } catch (error) {
-      setError(`Failed to fetch status for ${selectedCamera}`);
-    }
-  }, [selectedCamera, loadCameraData, setError]);
-
-  const fetchAllCameras = useCallback(async () => {
-    try {
-      await loadCameraList();
-      setLastUpdate(new Date());
-      setError(null);
-    } catch (error) {
-      setError("Failed to fetch camera information");
-    }
-  }, [loadCameraList, setError]);
-
   const refreshData = useCallback(async () => {
-    await Promise.all([fetchCurrentCameraStatus(), fetchAllCameras()]);
-  }, [fetchCurrentCameraStatus, fetchAllCameras]);
+    await loadCameraList();
+    setLastUpdate(new Date());
+  }, [loadCameraList]);
 
   const formatPosition = (value: number) => {
     return value?.toFixed(3);

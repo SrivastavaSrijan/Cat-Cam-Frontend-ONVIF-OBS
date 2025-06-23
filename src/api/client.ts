@@ -365,10 +365,14 @@ export class ApiClient {
 
   async startProjector(
     sourceName: string,
+    monitorIndex?: number,
     options?: RequestOptions
   ): Promise<void> {
     const url = this.buildUrl(OBS_ENDPOINTS.PROJECTOR.START);
-    const body: StartProjectorRequest = { source_name: sourceName };
+    const body: StartProjectorRequest = {
+      source_name: sourceName,
+      monitor_index: monitorIndex,
+    };
     await this.request<ApiResponse>(url, "POST", body, options);
   }
 

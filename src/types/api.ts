@@ -290,7 +290,7 @@ export interface UseOBSControlReturn extends UseApiReturn {
   startVirtualCamera: () => Promise<void>;
   stopVirtualCamera: () => Promise<void>;
   getVirtualCameraStatus: () => Promise<VirtualCameraStatus>;
-  startProjector: (sourceName: string) => Promise<void>;
+  startProjector: (sourceName: string, monitorIndex?: number) => Promise<void>;
   closeProjector: () => Promise<void>;
 }
 

@@ -23,7 +23,7 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
   const [projectorLoading, setProjectorLoading] = useState(false);
   const [projectorActive, setProjectorActive] = useState(false);
   const [activeProjectorMonitor, setActiveProjectorMonitor] = useState<
-    string | null
+    number | null
   >(null);
 
   // Dialog State
@@ -71,14 +71,14 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
     }
   };
 
-  const handleProjectorToggle = async (monitor: string | null) => {
+  const handleProjectorToggle = async (monitor: number | null) => {
     if (projectorLoading) return;
 
     setProjectorLoading(true);
     try {
-      if (monitor) {
+      if (monitor !== null) {
         // Start projector
-        await withLoading(() => obsControl.startProjector(monitor));
+        await withLoading(() => obsControl.startProjector("Mosaic", monitor));
         setProjectorActive(true);
         setActiveProjectorMonitor(monitor);
       } else {
@@ -136,28 +136,24 @@ const StreamControls: React.FC<StreamControlsProps> = ({ onRefresh }) => {
 
       {/* Projector Controls */}
       <Box>
-        <ToggleButtonGroup exclusive size="small">
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          onChange={(_, value) => {
+            handleProjectorToggle(value);
+          }}
+        >
           <ToggleButton
-            value="primary"
-            selected={activeProjectorMonitor === "primary"}
+            value={0}
+            selected={activeProjectorMonitor === 0}
             disabled={projectorLoading}
-            onClick={() =>
-              handleProjectorToggle(
-                activeProjectorMonitor === "primary" ? null : "primary"
-              )
-            }
           >
             <Monitor />
           </ToggleButton>
           <ToggleButton
-            value="secondary"
-            selected={activeProjectorMonitor === "secondary"}
+            value={1}
+            selected={activeProjectorMonitor === 1}
             disabled={projectorLoading}
-            onClick={() =>
-              handleProjectorToggle(
-                activeProjectorMonitor === "secondary" ? null : "secondary"
-              )
-            }
           >
             <Laptop />
           </ToggleButton>

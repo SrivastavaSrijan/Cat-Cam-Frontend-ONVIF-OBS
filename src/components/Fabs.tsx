@@ -1,4 +1,10 @@
-import { Gesture, MoreVert, Restore, Cable } from "@mui/icons-material";
+import {
+  Gesture,
+  MoreVert,
+  Restore,
+  Cable,
+  Refresh,
+} from "@mui/icons-material";
 import {
   Fab,
   CircularProgress,
@@ -8,6 +14,7 @@ import {
   ListItemText,
 } from "@mui/material";
 import { useOBSControl } from "../hooks";
+import { useStream } from "../hooks/useStream";
 import { useState } from "react";
 
 interface FabsProps {
@@ -26,6 +33,23 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
   };
 
   const { reconnect, loading: obsLoading } = useOBSControl();
+  const {
+    getStatus,
+    startStream,
+    stopStream,
+    loading: streamLoading,
+  } = useStream();
+
+  const refreshStream = async () => {
+    try {
+      await stopStream();
+      // Wait a bit before restarting
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await startStream();
+    } catch (error) {
+      console.error("Failed to refresh stream:", error);
+    }
+  };
 
   return (
     <>
@@ -34,7 +58,7 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
         color="primary"
         size="small"
         onClick={() => onCameraOverlayOpen(true)}
-        disabled={obsLoading}
+        disabled={obsLoading || streamLoading}
         sx={{
           position: "fixed",
           bottom: 16,
@@ -49,7 +73,7 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
         color="primary"
         size="small"
         onClick={handleMenuOpen}
-        disabled={obsLoading}
+        disabled={obsLoading || streamLoading}
         sx={{
           position: "fixed",
           bottom: 16,
@@ -57,7 +81,7 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
           zIndex: 1000,
         }}
       >
-        {obsLoading ? (
+        {obsLoading || streamLoading ? (
           <CircularProgress size={24} color="inherit" />
         ) : (
           <MoreVert fontSize="medium" />
@@ -80,10 +104,22 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
       >
         <MenuItem
           onClick={() => {
+            refreshStream();
+            handleMenuClose();
+          }}
+          disabled={obsLoading || streamLoading}
+        >
+          <ListItemIcon>
+            <Refresh />
+          </ListItemIcon>
+          <ListItemText primary="Refresh Stream" />
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
             reconnect(); // Use reconnect instead of refreshStreams
             handleMenuClose();
           }}
-          disabled={obsLoading}
+          disabled={obsLoading || streamLoading}
         >
           <ListItemIcon>
             <Restore />
@@ -95,7 +131,7 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
             reconnect();
             handleMenuClose();
           }}
-          disabled={obsLoading}
+          disabled={obsLoading || streamLoading}
         >
           <ListItemIcon>
             <Cable />

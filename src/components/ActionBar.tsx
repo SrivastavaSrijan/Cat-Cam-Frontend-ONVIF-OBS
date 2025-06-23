@@ -15,7 +15,7 @@ const ActionBar: React.FC = () => {
   const [nightMode, setNightMode] = useState<boolean | undefined>(undefined);
   const [nightModeLoading, setNightModeLoading] = useState(false);
 
-  const { selectedCamera, streamView } = useAppContext();
+  const { selectedCamera, streamView, selectStreamView } = useAppContext();
   const { error, setError } = useAutoDismissError();
   const obsControl = useOBSControl();
   const cameraControl = useCameraControl();
@@ -63,12 +63,17 @@ const ActionBar: React.FC = () => {
           newView,
           selectedCamera || undefined
         );
+        selectStreamView({
+          layout_mode: newView,
+          ...(newView === "highlight" &&
+            selectedCamera && { active_source: selectedCamera }),
+        });
       } catch (error) {
         console.error("Failed to switch stream view:", error);
         setError("Failed to switch stream view");
       }
     },
-    [obsControl, selectedCamera, setError]
+    [obsControl, selectStreamView, selectedCamera, setError]
   );
 
   // Check night mode when camera changes

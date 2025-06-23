@@ -32,7 +32,6 @@ export const useAppData = () => {
   // Camera selection state
   const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
   const [allCameras, setAllCameras] = useState<CameraInfo[]>([]);
-  const [camerasLoaded, setCamerasLoaded] = useState(false);
   const [streamView, setStreamView] = useState<StreamView | undefined>(
     undefined
   );
@@ -42,18 +41,16 @@ export const useAppData = () => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [isStreamLoading, setIsStreamLoading] = useState(false);
 
+  // Initialization state
+
   const { loading, withLoading } = useLoading();
   const { showError, showSuccess } = useNotification();
 
-  const loadingRef = useRef<Set<string>>(new Set());
-  const cameraListLoadingRef = useRef(false);
   const streamPlayerRef = useRef<HTMLImageElement>(null);
 
   const loadCameraData = useCallback(
     async (nickname: string) => {
-      if (!nickname || loadingRef.current.has(nickname)) return;
-
-      loadingRef.current.add(nickname);
+      if (!nickname) return;
 
       // Set loading state
       const loadingData: CameraData = {
@@ -118,8 +115,6 @@ export const useAppData = () => {
             error instanceof Error ? error.message : "Unknown error"
           }`
         );
-      } finally {
-        loadingRef.current.delete(nickname);
       }
     },
     [withLoading, showError, cameraData]
@@ -222,15 +217,10 @@ export const useAppData = () => {
 
   // Camera list management
   const loadCameraList = useCallback(async () => {
-    if (cameraListLoadingRef.current || camerasLoaded) return;
-
-    cameraListLoadingRef.current = true;
-
     try {
       const cameras = await apiClient.getAllCameras();
 
       setAllCameras(cameras);
-      setCamerasLoaded(true);
 
       // Check current OBS transformation to see if a camera is already highlighted
       try {
@@ -254,7 +244,7 @@ export const useAppData = () => {
               "Auto-selected camera from current OBS highlight:",
               highlightedCamera.nickname
             );
-            return; // Exit early, don't auto-select first camera
+            return { highlightedCamera, currentStreamView };
           }
         }
       } catch (error) {
@@ -273,6 +263,10 @@ export const useAppData = () => {
           "Auto-selected first online camera:",
           onlineCameras[0].nickname
         );
+        return {
+          highlightedCamera: onlineCameras[0],
+          currentStreamView: "grid",
+        };
       }
 
       console.log(
@@ -281,11 +275,8 @@ export const useAppData = () => {
     } catch (error) {
       showError("Failed to load camera list");
       console.error("Camera list loading error:", error);
-    } finally {
-      cameraListLoadingRef.current = false;
     }
   }, [
-    camerasLoaded,
     loadCameraData,
     selectStreamView,
     selectedCamera,
@@ -325,7 +316,6 @@ export const useAppData = () => {
       cameraList,
       onlineCameraCount,
       totalCameraCount,
-      isLoadingCameras: cameraListLoadingRef.current,
       loadCameraList,
       selectCamera,
 
