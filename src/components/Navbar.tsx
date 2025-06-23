@@ -1,6 +1,7 @@
 import type React from "react";
 import { AppBar, Tab, Tabs } from "@mui/material";
 import { Videocam, VideoSettings, Analytics } from "@mui/icons-material";
+import { usePWABackgroundSync } from "../hooks";
 
 interface NavbarProps {
   value: number;
@@ -8,6 +9,13 @@ interface NavbarProps {
 }
 
 const Navbar = ({ value, handleChange }: NavbarProps) => {
+  // Set up PWA background sync
+  usePWABackgroundSync({
+    pollInterval: 30000, // Poll every 30 seconds in background
+    enableStreamManagement: true,
+    enableCameraListRefresh: true,
+  });
+
   return (
     <AppBar position="static" elevation={2}>
       <Tabs value={value} onChange={handleChange} variant="fullWidth" centered>

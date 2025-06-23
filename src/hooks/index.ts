@@ -9,3 +9,7 @@ export { useStream } from "./useStream";
 export { useOrientation } from "./useOrientation";
 export { useEventListener } from "./useEventListener";
 export { useMovementControls } from "./useMovementControls";
+export {
+  usePWABackgroundSync,
+  type PWABackgroundSyncOptions,
+} from "./usePWABackgroundSync";
