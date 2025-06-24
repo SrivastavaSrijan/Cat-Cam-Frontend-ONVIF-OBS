@@ -43,18 +43,7 @@ const App: React.FC = () => {
     switch (value) {
       case 1:
         return (
-          <Stack spacing={3}>
-            <CameraSelector />
-            <Presets />
-            {!disablePlayer && (
-              <PlayerWithController
-                title="Main Cam"
-                height={200}
-                autoPlay={true}
-                controls={true}
-              />
-            )}
-
+          <Stack spacing={{ xs: 2, md: 3 }}>
             <Card>
               <CardContent>
                 <Stack
@@ -69,6 +58,16 @@ const App: React.FC = () => {
                 </Stack>
               </CardContent>
             </Card>
+            {!disablePlayer && (
+              <PlayerWithController
+                title="Main Cam"
+                height={200}
+                autoPlay={true}
+                controls={true}
+              />
+            )}
+            <CameraSelector />
+            <Presets />
             <MovementControls />
           </Stack>
         );
