@@ -120,6 +120,12 @@ export const useCameraControl = (): UseCameraControlReturn => {
     [handleApiCall]
   );
 
+  const reinitializeCameras = useCallback(
+    (): Promise<CameraInfo[]> =>
+      handleApiCall(() => apiClient.reinitializeCameras()),
+    [handleApiCall]
+  );
+
   return {
     loading,
     error,
@@ -136,5 +142,6 @@ export const useCameraControl = (): UseCameraControlReturn => {
     stopMove,
     setMovementSpeed,
     toggleNightMode,
+    reinitializeCameras,
   };
 };

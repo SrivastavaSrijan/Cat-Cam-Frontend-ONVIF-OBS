@@ -3,15 +3,7 @@ import { useInterval } from "react-use";
 import { useEventListener } from "./useEventListener";
 import { useStream } from "./useStream";
 import { useAppContext } from "../contexts/AppContext";
-
-export interface PWABackgroundSyncOptions {
-  /** Interval for background polling in milliseconds. Default: 30000 (30 seconds) */
-  pollInterval?: number;
-  /** Enable automatic stream management in background. Default: true */
-  enableStreamManagement?: boolean;
-  /** Enable automatic camera list refresh. Default: true */
-  enableCameraListRefresh?: boolean;
-}
+import { APP_CONFIG } from "../config";
 
 // Clean page visibility hook using our existing useEventListener
 const usePageVisibility = () => {
@@ -32,11 +24,7 @@ const usePageVisibility = () => {
  * Hook to manage PWA background sync behavior
  * Handles stream management and camera data refresh when app goes to background/foreground
  */
-export const usePWABackgroundSync = ({
-  pollInterval = 30000,
-  enableStreamManagement = true,
-  enableCameraListRefresh = true,
-}: PWABackgroundSyncOptions = {}) => {
+export const usePWABackgroundSync = () => {
   const isVisible = usePageVisibility();
   const { startStream, getStatus } = useStream();
   const { setStreamURL, isStreaming, setIsStreaming, loadCameraList } =
@@ -44,8 +32,6 @@ export const usePWABackgroundSync = ({
 
   // Function to start stream and set URL
   const startStreamAndSetURL = useCallback(async () => {
-    if (!enableStreamManagement) return;
-
     try {
       console.log("[Background] Starting MJPEG stream...");
       await startStream();
@@ -58,13 +44,7 @@ export const usePWABackgroundSync = ({
     } catch (error) {
       console.error("[Background] Failed to start stream:", error);
     }
-  }, [
-    startStream,
-    getStatus,
-    setStreamURL,
-    setIsStreaming,
-    enableStreamManagement,
-  ]);
+  }, [startStream, getStatus, setStreamURL, setIsStreaming]);
 
   // Background tasks
   const executeBackgroundTasks = useCallback(async () => {
@@ -73,20 +53,18 @@ export const usePWABackgroundSync = ({
     const tasks = [];
 
     // Task 1: Refresh camera list
-    if (enableCameraListRefresh) {
-      tasks.push(
-        (async () => {
-          try {
-            await loadCameraList();
-          } catch (error) {
-            console.error("[Background] Camera list refresh failed:", error);
-          }
-        })()
-      );
-    }
+    tasks.push(
+      (async () => {
+        try {
+          await loadCameraList();
+        } catch (error) {
+          console.error("[Background] Camera list refresh failed:", error);
+        }
+      })()
+    );
 
     // Task 2: Start stream if not running
-    if (enableStreamManagement && !isStreaming) {
+    if (!isStreaming) {
       tasks.push(
         (async () => {
           try {
@@ -102,13 +80,7 @@ export const usePWABackgroundSync = ({
     if (tasks.length > 0) {
       await Promise.allSettled(tasks);
     }
-  }, [
-    loadCameraList,
-    isStreaming,
-    startStreamAndSetURL,
-    enableCameraListRefresh,
-    enableStreamManagement,
-  ]);
+  }, [loadCameraList, isStreaming, startStreamAndSetURL]);
 
   // Handle visibility changes - when app goes to background/foreground
   useEventListener(
@@ -116,12 +88,10 @@ export const usePWABackgroundSync = ({
     async () => {
       if (!document.hidden) {
         console.log("[Background] App returned to foreground");
-        if (enableCameraListRefresh) {
-          try {
-            await loadCameraList();
-          } catch (error) {
-            console.error("[Background] Foreground refresh failed:", error);
-          }
+        try {
+          await loadCameraList();
+        } catch (error) {
+          console.error("[Background] Foreground refresh failed:", error);
         }
       } else {
         console.log("[Background] App went to background");
@@ -131,13 +101,7 @@ export const usePWABackgroundSync = ({
     document
   );
 
-  // Background polling when page is not visible
-  useInterval(executeBackgroundTasks, !isVisible ? pollInterval : null);
+  useInterval(executeBackgroundTasks, APP_CONFIG.BACKGROUND_REFRESH_INTERVAL);
 
-  return {
-    isBackground: !isVisible,
-    startStreamAndSetURL,
-    isPWABackgroundSyncActive:
-      enableStreamManagement || enableCameraListRefresh,
-  };
+  return { isVisible };
 };

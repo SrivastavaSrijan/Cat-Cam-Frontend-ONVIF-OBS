@@ -224,9 +224,8 @@ export const useAppData = () => {
 
       // Check current OBS transformation to see if a camera is already highlighted
       try {
-        const currentStreamView = await withLoading(() =>
-          apiClient.getTransformationState()
-        );
+        const currentStreamView = await apiClient.getTransformationState();
+
         selectStreamView(currentStreamView);
         if (currentStreamView?.layout_mode === "highlight") {
           // Check if the highlighted source corresponds to an online camera
@@ -276,13 +275,7 @@ export const useAppData = () => {
       showError("Failed to load camera list");
       console.error("Camera list loading error:", error);
     }
-  }, [
-    loadCameraData,
-    selectStreamView,
-    selectedCamera,
-    showError,
-    withLoading,
-  ]);
+  }, [loadCameraData, selectStreamView, selectedCamera, showError]);
 
   const selectCamera = useCallback((nickname: string) => {
     setSelectedCamera(nickname);

@@ -126,6 +126,8 @@ export interface CameraListResponse
 export interface PresetListResponse
   extends ApiResponse<{ presets: Preset[] }> {}
 export interface ImagingSettingsResponse extends ApiResponse<ImagingSettings> {}
+export interface ReinitializeCamerasResponse
+  extends ApiResponse<{ cameras: CameraInfo[] }> {}
 
 // ============================================================================
 // OBS API Types
@@ -274,6 +276,7 @@ export interface UseCameraControlReturn extends UseApiReturn {
     zoomSpeed?: number
   ) => Promise<void>;
   toggleNightMode: (nickname: string, enable: boolean) => Promise<void>;
+  reinitializeCameras: () => Promise<CameraInfo[]>;
 }
 
 export interface UseOBSControlReturn extends UseApiReturn {
@@ -292,6 +295,7 @@ export interface UseOBSControlReturn extends UseApiReturn {
   getVirtualCameraStatus: () => Promise<VirtualCameraStatus>;
   startProjector: (sourceName: string, monitorIndex?: number) => Promise<void>;
   closeProjector: () => Promise<void>;
+  refreshMainSource: () => Promise<void>;
 }
 
 export interface UseMjpegStreamReturn extends UseApiReturn {

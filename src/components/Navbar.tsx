@@ -10,11 +10,7 @@ interface NavbarProps {
 
 const Navbar = ({ value, handleChange }: NavbarProps) => {
   // Set up PWA background sync
-  usePWABackgroundSync({
-    pollInterval: 30000, // Poll every 30 seconds in background
-    enableStreamManagement: true,
-    enableCameraListRefresh: true,
-  });
+  usePWABackgroundSync();
 
   return (
     <AppBar position="static" elevation={2}>

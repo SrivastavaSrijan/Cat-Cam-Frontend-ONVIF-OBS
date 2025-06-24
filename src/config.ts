@@ -11,6 +11,10 @@ export const WEBSOCKET_URL = API_BASE_URL.replace(/:\d+$/, ":3333").replace(
   "ws"
 );
 
+export const APP_CONFIG = {
+  BACKGROUND_REFRESH_INTERVAL: 30000, // 30 seconds
+};
+
 export const CAMERA_ENDPOINTS = {
   STATUS: "/ptz/status",
   MOVE: "/ptz/move",
@@ -24,6 +28,7 @@ export const CAMERA_ENDPOINTS = {
   CONTINUOUS_MOVE: "/ptz/continuous_move",
   STOP: "/ptz/stop",
   MOVEMENT_STATUS: "/ptz/movement_status",
+  REINITIALIZE: "/ptz/reinitialize",
 } as const;
 
 export const OBS_ENDPOINTS = {
@@ -52,3 +57,8 @@ export const MJPEG_ENDPOINTS = {
   STOP: "/stop",
   STREAM: "/stream",
 } as const;
+
+export const SOURCE_NAMES = {
+  WAIT: "Please Wait!",
+  MAIN: "Mosaic",
+};

@@ -277,6 +277,11 @@ export class ApiClient {
     await this.request<ApiResponse>(url, "POST", body, options);
   }
 
+  async reinitializeCameras(options?: RequestOptions): Promise<CameraInfo[]> {
+    const url = this.buildUrl(CAMERA_ENDPOINTS.REINITIALIZE);
+    return this.request<CameraInfo[]>(url, "POST", undefined, options);
+  }
+
   // ============================================================================
   // OBS API Methods
   // ============================================================================

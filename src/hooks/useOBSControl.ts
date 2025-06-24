@@ -7,6 +7,7 @@ import type {
   VirtualCameraStatus,
   UseOBSControlReturn,
 } from "../types/api";
+import { SOURCE_NAMES } from "../config";
 
 export const useOBSControl = (): UseOBSControlReturn => {
   const [loading, setLoading] = useState(false);
@@ -99,6 +100,16 @@ export const useOBSControl = (): UseOBSControlReturn => {
     [handleApiCall]
   );
 
+  const refreshMainSource = async () => {
+    await switchScene(SOURCE_NAMES.WAIT);
+    return new Promise<void>((resolve) => {
+      setTimeout(async () => {
+        await switchScene(SOURCE_NAMES.MAIN);
+        resolve();
+      }, 3000);
+    });
+  };
+
   return {
     loading,
     error,
@@ -115,5 +126,6 @@ export const useOBSControl = (): UseOBSControlReturn => {
     getVirtualCameraStatus,
     startProjector,
     closeProjector,
+    refreshMainSource,
   };
 };
