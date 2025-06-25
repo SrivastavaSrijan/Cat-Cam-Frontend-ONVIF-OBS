@@ -1,7 +1,6 @@
 export { default as ActionBar } from "./ActionBar";
 export { default as Presets } from "./Presets";
 export { default as ControllerOverlay } from "./ControllerOverlay";
-export { default as PlayerWithController } from "./PlayerWithController";
 export { default as CameraSelector } from "./CameraSelector";
 export { default as InstallPrompt } from "./InstallPrompt";
 export { default as Player } from "./Player";

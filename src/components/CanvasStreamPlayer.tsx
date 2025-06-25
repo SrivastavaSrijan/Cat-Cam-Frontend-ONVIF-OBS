@@ -19,67 +19,15 @@ import {
   CameraAlt,
 } from "@mui/icons-material";
 import { useEventListener } from "../hooks/useEventListener";
+import {
+  type CanvasStreamPlayerRef,
+  type CanvasStreamPlayerProps,
+  getDisplayedDims,
+  clamp,
+} from "../hooks";
+import { PLAYER_CONFIG } from "../config";
 
-/* ------------------------------------------------------------------ */
-/* Types                                                             */
-/* ------------------------------------------------------------------ */
-export interface CanvasStreamPlayerRef {
-  setSrc(src: string): void;
-  getCanvas(): HTMLCanvasElement | null;
-  togglePiP(): Promise<void>;
-  toggleFullscreen(): Promise<void>;
-  refreshStream?: () => Promise<void>;
-}
-
-export interface CanvasStreamPlayerProps {
-  src: string;
-  alt?: string;
-  width?: number | string;
-  height?: number | string;
-  gesturesEnabled?: boolean;
-  minZoom?: number;
-  maxZoom?: number;
-  showControls?: boolean;
-  onError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
-  style?: React.CSSProperties;
-  className?: string;
-  onPipChange?: (inPip: boolean) => void;
-  onFullscreenChange?: (isFullscreen: boolean) => void;
-  onRefresh?: () => Promise<void>;
-  onCameraOverlay?: () => void;
-  showCameraControls?: boolean;
-  error?: string | null;
-}
-
-/* ------------------------------------------------------------------ */
-/* Helpers                                                            */
-/* ------------------------------------------------------------------ */
-const clamp = (v: number, min: number, max: number) =>
-  Math.min(max, Math.max(min, v));
-
-const getDisplayedDims = (
-  containerW: number,
-  containerH: number,
-  imgW: number,
-  imgH: number
-) => {
-  if (!imgW || !imgH) return { dw: containerW, dh: containerH }; // fallback
-  const containerAR = containerW / containerH;
-  const imgAR = imgW / imgH;
-
-  if (containerAR > imgAR) {
-    // container wider ⇒ height clamps, width letter-boxes
-    const dh = containerH;
-    const dw = dh * imgAR;
-    return { dw, dh };
-  }
-  const dw = containerW;
-  const dh = dw / imgAR;
-  return { dw, dh };
-};
-
-// Minimum canvas height we want to feed into PiP so the window isn't tiny
-const MIN_PIP_HEIGHT = 720; // px
+const { MIN_ZOOM, MAX_ZOOM, MIN_PIP_HEIGHT } = PLAYER_CONFIG;
 /* ------------------------------------------------------------------ */
 /* Component                                                          */
 /* ------------------------------------------------------------------ */
@@ -88,25 +36,7 @@ const CanvasStreamPlayer = forwardRef<
   CanvasStreamPlayerProps
 >(
   (
-    {
-      src,
-      alt = "stream",
-      width = "100%",
-      height = 500,
-      gesturesEnabled = true,
-      minZoom = 1,
-      maxZoom = 4,
-      showControls = true,
-      onError,
-      style,
-      className,
-      onPipChange,
-      onFullscreenChange,
-      onRefresh,
-      onCameraOverlay,
-      showCameraControls = false,
-      error,
-    },
+    { src, alt = "stream", onError, onRefresh, onCameraOverlay, error },
     ref
   ) => {
     /* -------------------------- Refs & State ------------------------- */
@@ -114,7 +44,7 @@ const CanvasStreamPlayer = forwardRef<
     const imgRef = useRef<HTMLImageElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const rafRef = useRef<number>();
-    const [transform, setTransform] = useState({ scale: minZoom, x: 0, y: 0 });
+    const [transform, setTransform] = useState({ scale: MIN_ZOOM, x: 0, y: 0 });
     const [imgNatural, setImgNatural] = useState({ w: 0, h: 0 });
     const [inPip, setInPip] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
@@ -126,14 +56,8 @@ const CanvasStreamPlayer = forwardRef<
         setSrc(newSrc) {
           if (imgRef.current) imgRef.current.src = newSrc;
         },
-        getCanvas() {
-          return canvasRef.current;
-        },
-        togglePiP,
-        toggleFullscreen,
-        refreshStream: onRefresh,
       }),
-      [onRefresh]
+      []
     );
 
     /* -------------------------- Utils -------------------------------- */
@@ -160,7 +84,7 @@ const CanvasStreamPlayer = forwardRef<
     const apply = useCallback(
       (next: { scale?: number; x?: number; y?: number }) => {
         setTransform((cur) => {
-          const scale = clamp(next.scale ?? cur.scale, minZoom, maxZoom);
+          const scale = clamp(next.scale ?? cur.scale, MIN_ZOOM, MAX_ZOOM);
           const { maxX, maxY } = getPanLimits(scale);
           const styles = {
             scale,
@@ -171,16 +95,15 @@ const CanvasStreamPlayer = forwardRef<
           return styles;
         });
       },
-      [getPanLimits, maxZoom, minZoom]
+      [getPanLimits]
     );
 
     /* -------------------------- Gesture handlers --------------------- */
     useGesture(
       {
         onPinch: ({ da: [d], origin: [ox, oy], memo }) => {
-          if (!gesturesEnabled) return;
           const start = memo ?? transform.scale;
-          const nextScale = clamp(start * d, minZoom, maxZoom);
+          const nextScale = clamp(start * d, MIN_ZOOM, MAX_ZOOM);
 
           // keep pinch origin pinned
           const wrapper = wrapperRef.current;
@@ -197,9 +120,6 @@ const CanvasStreamPlayer = forwardRef<
           return start;
         },
         onDrag: ({ movement: [mx, my], memo, first, last }) => {
-          if (!gesturesEnabled) return;
-
-          // Only prevent drag when the content fully fits in both axes
           const wrap = wrapperRef.current;
           if (!wrap) return;
           const { width: cw, height: ch } = wrap.getBoundingClientRect();
@@ -219,7 +139,6 @@ const CanvasStreamPlayer = forwardRef<
           return start;
         },
         onWheel: ({ event }) => {
-          if (!gesturesEnabled) return;
           event.preventDefault();
           const wrapper = wrapperRef.current;
           if (!wrapper) return;
@@ -227,7 +146,7 @@ const CanvasStreamPlayer = forwardRef<
           const cx = event.clientX;
           const cy = event.clientY;
           const delta = event.deltaY < 0 ? 1.2 : 0.8;
-          const nextScale = clamp(transform.scale * delta, minZoom, maxZoom);
+          const nextScale = clamp(transform.scale * delta, MIN_ZOOM, MAX_ZOOM);
 
           const relX = cx - (rect.left + rect.width / 2);
           const relY = cy - (rect.top + rect.height / 2);
@@ -239,10 +158,9 @@ const CanvasStreamPlayer = forwardRef<
           apply({ scale: nextScale, x: nextX, y: nextY });
         },
         onDoubleClick: ({ event }) => {
-          if (!gesturesEnabled) return;
-          const zoomedIn = transform.scale > minZoom;
+          const zoomedIn = transform.scale > MIN_ZOOM;
           zoomedIn
-            ? apply({ scale: minZoom, x: 0, y: 0 })
+            ? apply({ scale: MIN_ZOOM, x: 0, y: 0 })
             : apply({ scale: 2 });
         },
       },
@@ -250,13 +168,9 @@ const CanvasStreamPlayer = forwardRef<
     );
 
     /* -------------------------- Buttons ------------------------------ */
-    const zoomIn = () => {
-      apply({ scale: transform.scale * 1.25 });
-    };
-    const zoomOut = () => {
-      apply({ scale: transform.scale * 0.8 });
-    };
-    const reset = () => apply({ scale: minZoom, x: 0, y: 0 });
+    const zoomIn = () => apply({ scale: transform.scale * 1.25 });
+    const zoomOut = () => apply({ scale: transform.scale * 0.8 });
+    const reset = () => apply({ scale: MIN_ZOOM, x: 0, y: 0 });
 
     /* -------------------------- PIP ---------------------------------- */
     const togglePiP = async () => {
@@ -336,7 +250,6 @@ const CanvasStreamPlayer = forwardRef<
       loop();
     };
 
-    /* -------------------------- Fullscreen --------------------------- */
     const toggleFullscreen = async () => {
       if (!wrapperRef.current) return;
 
@@ -346,34 +259,10 @@ const CanvasStreamPlayer = forwardRef<
           if (wrapperRef.current.requestFullscreen) {
             await wrapperRef.current.requestFullscreen();
           }
-          // Try to lock orientation to landscape on mobile (optional)
-          // @ts-ignore - orientation lock API not fully supported in TypeScript
-          if (window.screen?.orientation?.lock) {
-            try {
-              // @ts-ignore - orientation lock API not fully supported in TypeScript
-              await window.screen.orientation.lock("landscape");
-            } catch (orientationError) {
-              console.log(
-                "Orientation lock not supported or failed:",
-                orientationError
-              );
-              // Don't treat this as an error - orientation lock is optional
-            }
-          }
         } else {
           // Exiting fullscreen
           if (document.exitFullscreen) {
             await document.exitFullscreen();
-          }
-          // Unlock orientation when exiting fullscreen
-          // @ts-ignore - orientation lock API not fully supported in TypeScript
-          if (window.screen?.orientation?.unlock) {
-            try {
-              window.screen.orientation.unlock();
-            } catch (orientationError) {
-              console.log("Orientation unlock failed:", orientationError);
-              // Don't treat this as an error
-            }
           }
         }
       } catch (err) {
@@ -392,8 +281,12 @@ const CanvasStreamPlayer = forwardRef<
           document.msFullscreenElement
       );
       setIsFullscreen(isCurrentlyFullscreen);
-      onFullscreenChange?.(isCurrentlyFullscreen);
-    }, [onFullscreenChange]);
+    }, []);
+
+    const handlePipChange = useCallback(() => {
+      const pip = !!document.pictureInPictureElement;
+      setInPip(pip);
+    }, []);
 
     useEventListener("fullscreenchange", handleFullscreenChange, document);
     useEventListener(
@@ -403,13 +296,6 @@ const CanvasStreamPlayer = forwardRef<
     );
     useEventListener("mozfullscreenchange", handleFullscreenChange, document);
     useEventListener("MSFullscreenChange", handleFullscreenChange, document);
-
-    const handlePipChange = useCallback(() => {
-      const pip = !!document.pictureInPictureElement;
-      setInPip(pip);
-      onPipChange?.(pip);
-    }, [onPipChange]);
-
     useEventListener("enterpictureinpicture", handlePipChange, document);
     useEventListener("leavepictureinpicture", handlePipChange, document);
 
@@ -441,29 +327,27 @@ const CanvasStreamPlayer = forwardRef<
 
     /* -------------------------- Render ------------------------------- */
     const { scale, x, y } = transform;
-    const isZoomed = scale > minZoom;
+    const isZoomed = scale > MIN_ZOOM;
 
     return (
       <Box
         ref={wrapperRef}
         sx={{
           position: "relative",
-          width,
-          height,
+          width: "100%",
+          height: "100%",
           overflow: "hidden",
           backgroundColor: "black",
-          touchAction: gesturesEnabled ? "none" : "auto",
+          touchAction: "none",
           userSelect: "none",
-          cursor: gesturesEnabled ? (isZoomed ? "grab" : "zoom-in") : "default",
+          cursor: isZoomed ? "grab" : "zoom-in",
           "&:active": {
-            cursor: gesturesEnabled && isZoomed ? "grabbing" : undefined,
+            cursor: isZoomed ? "grabbing" : undefined,
           },
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          ...style,
         }}
-        className={className}
       >
         <canvas ref={canvasRef} style={{ display: "none" }} />
 
@@ -487,18 +371,15 @@ const CanvasStreamPlayer = forwardRef<
 
         {/* Error overlay */}
         {error && (
-          <Box
+          <Stack
             sx={{
               position: "absolute",
               top: 0,
               left: 0,
               right: 0,
               bottom: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 5,
             }}
+            direction="row"
           >
             <Stack spacing={2} alignItems="center">
               <Typography variant="body2" color="white" textAlign="center">
@@ -506,95 +387,89 @@ const CanvasStreamPlayer = forwardRef<
               </Typography>
               {onRefresh && (
                 <Tooltip title="Refresh Stream">
-                  <IconButton onClick={onRefresh} size="large">
+                  <IconButton onClick={onRefresh} size="medium">
                     <RestartAlt />
                   </IconButton>
                 </Tooltip>
               )}
             </Stack>
-          </Box>
+          </Stack>
         )}
 
         {/* Zoom controls */}
-        {showControls && gesturesEnabled && (
-          <Box
-            sx={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              display: "flex",
-              flexDirection: "column",
-              gap: 1,
-              borderRadius: 1,
-              zIndex: 10,
-            }}
-          >
-            <Tooltip title="Zoom In">
-              <IconButton
-                size="medium"
-                onClick={zoomIn}
-                disabled={scale >= maxZoom}
-              >
-                <ZoomIn />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Zoom Out">
-              <IconButton
-                size="medium"
-                onClick={zoomOut}
-                disabled={scale <= minZoom}
-              >
-                <ZoomOut />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Reset Zoom">
-              <IconButton size="medium" onClick={reset} disabled={!isZoomed}>
-                <RestartAlt />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        )}
+        <Stack
+          direction="row"
+          sx={{
+            position: "absolute",
+            top: 8,
+            left: 8,
+            zIndex: 10,
+          }}
+          gap={2}
+        >
+          <Tooltip title="Zoom In">
+            <IconButton
+              size="medium"
+              onClick={zoomIn}
+              disabled={scale >= MAX_ZOOM}
+            >
+              <ZoomIn />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Zoom Out">
+            <IconButton
+              size="medium"
+              onClick={zoomOut}
+              disabled={scale <= MIN_ZOOM}
+            >
+              <ZoomOut />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Reset Zoom">
+            <IconButton size="medium" onClick={reset} disabled={!isZoomed}>
+              <RestartAlt />
+            </IconButton>
+          </Tooltip>
+        </Stack>
 
-        {/* Main controls (bottom right) */}
-        {showControls && (
-          <Box
-            sx={{
-              position: "absolute",
-              bottom: 8,
-              right: 8,
-              display: "flex",
-              gap: 1,
-              borderRadius: 1,
-              zIndex: 10,
-            }}
-          >
-            {"pictureInPictureEnabled" in document && (
-              <Tooltip
-                title={inPip ? "Exit Picture‑in‑Picture" : "Picture‑in‑Picture"}
-              >
-                <IconButton size="large" onClick={togglePiP}>
-                  <PictureInPictureAlt />
-                </IconButton>
-              </Tooltip>
-            )}
-            <Tooltip title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}>
-              <IconButton size="large" onClick={toggleFullscreen}>
-                {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
+        {/* Main controls */}
+        <Stack
+          direction="row"
+          sx={{
+            position: "absolute",
+            bottom: 8,
+            right: 8,
+            zIndex: 10,
+          }}
+          gap={2}
+        >
+          {"pictureInPictureEnabled" in document && (
+            <Tooltip
+              title={inPip ? "Exit Picture‑in‑Picture" : "Picture‑in‑Picture"}
+            >
+              <IconButton size="medium" onClick={togglePiP}>
+                <PictureInPictureAlt />
               </IconButton>
             </Tooltip>
-            {showCameraControls && onCameraOverlay && (
-              <Tooltip title="Camera Controls">
-                <IconButton size="large" onClick={onCameraOverlay}>
-                  <CameraAlt />
-                </IconButton>
-              </Tooltip>
-            )}
-          </Box>
-        )}
+          )}
+
+          {onCameraOverlay && isFullscreen && (
+            <Tooltip title="Camera Controls">
+              <IconButton size="medium" onClick={onCameraOverlay}>
+                <CameraAlt />
+              </IconButton>
+            </Tooltip>
+          )}
+          <Tooltip title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}>
+            <IconButton size="medium" onClick={toggleFullscreen}>
+              {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
+            </IconButton>
+          </Tooltip>
+        </Stack>
 
         {/* Zoom level indicator */}
-        {showControls && isZoomed && (
-          <Box
+        {isZoomed && (
+          <Stack
             sx={{
               position: "absolute",
               bottom: 16,
@@ -608,7 +483,7 @@ const CanvasStreamPlayer = forwardRef<
             <Typography variant="caption" color="white">
               {Math.round(scale * 100)}%
             </Typography>
-          </Box>
+          </Stack>
         )}
       </Box>
     );

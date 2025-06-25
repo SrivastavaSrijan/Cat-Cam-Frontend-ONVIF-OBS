@@ -175,7 +175,7 @@ const ControllerOverlay: React.FC<CameraOverlayProps> = ({
   onClose,
   orientation = "auto",
   isOverlayMode = true,
-  usePortal = false,
+  usePortal = true,
 }) => {
   const {
     cameraMode,
@@ -208,7 +208,6 @@ const ControllerOverlay: React.FC<CameraOverlayProps> = ({
   });
 
   // Don't render anything if not open
-  console.log("ControllerOverlay render:", { open, usePortal, isOverlayMode });
   if (!open) return null;
 
   const renderCameraSection = () => (

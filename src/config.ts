@@ -62,3 +62,13 @@ export const SOURCE_NAMES = {
   WAIT: "Please Wait",
   MAIN: "Mosaic",
 };
+
+export const PLAYER_CONFIG = {
+  ASPECT_RATIO: 16 / 9,
+  HEIGHT: 500,
+  PLACEHOLDER:
+    "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMSIgaGVpZ2h0PSIxIiB2aWV3Qm94PSIwIDAgMSAxIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiMwMDAiLz48L3N2Zz4=",
+  MIN_PIP_HEIGHT: 720, // px
+  MIN_ZOOM: 1,
+  MAX_ZOOM: 4,
+};

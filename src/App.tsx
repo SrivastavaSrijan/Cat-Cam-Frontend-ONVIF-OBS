@@ -21,7 +21,7 @@ import {
   StreamControls,
   ControllerOverlay,
   Presets,
-  PlayerWithController,
+  Player,
 } from "./components";
 import { NotificationProvider, AppProvider } from "./contexts";
 import MovementControls from "./components/MovementControls";
@@ -56,14 +56,7 @@ const App: React.FC = () => {
                 </Stack>
               </CardContent>
             </Card>
-            {!disablePlayer && (
-              <PlayerWithController
-                title="Main Cam"
-                height={200}
-                autoPlay={true}
-                controls={true}
-              />
-            )}
+            {!disablePlayer && <Player />}
             <CameraSelector />
             <Presets />
             <MovementControls />
