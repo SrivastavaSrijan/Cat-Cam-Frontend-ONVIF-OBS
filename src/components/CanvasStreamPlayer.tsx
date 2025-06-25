@@ -101,29 +101,34 @@ const CanvasStreamPlayer = forwardRef<
   /* -------------------------- Gesture handlers --------------------- */
   useGesture(
     {
-      onPinch: ({ offset: [d], origin: [ox, oy], memo, first, last }) => {
-        // Store initial scale on first gesture
-        if (first) {
-          memo = transform.scale;
+      onPinch: ({
+        origin: [ox, oy],
+        offset: [s], // ← scale from the library (1, 1.2, 0.8, …)
+        first,
+        last,
+        memo,
+      }) => {
+        /* memo = [startX, startY, startScale, tx, ty] */
+        if (first && wrapperRef.current) {
+          const { x, y, width, height } =
+            wrapperRef.current.getBoundingClientRect();
+          const tx = ox - (x + width / 2);
+          const ty = oy - (y + height / 2);
+          memo = [transform.x, transform.y, transform.scale, tx, ty];
         }
 
-        // Calculate smooth scaling with dampening factor
-        const scaleMultiplier = 1 + d * 0.01; // Reduce sensitivity
-        const nextScale = clamp(memo * scaleMultiplier, MIN_ZOOM, MAX_ZOOM);
+        const [sx, sy, ss, tx, ty] = memo as number[];
+        let nextScale = ss * s; // continuous, no jump
 
-        // Keep pinch origin pinned
-        const wrapper = wrapperRef.current;
-        if (!wrapper) return memo;
+        if (last) nextScale = clamp(nextScale, MIN_ZOOM, MAX_ZOOM); // clamp only at end
 
-        const rect = wrapper.getBoundingClientRect();
-        const relX = ox - (rect.left + rect.width / 2);
-        const relY = oy - (rect.top + rect.height / 2);
-        const scaleRatio = nextScale / transform.scale;
-
-        const nextX = transform.x - relX * (scaleRatio - 1);
-        const nextY = transform.y - relY * (scaleRatio - 1);
+        const nextX = sx - (s - 1) * tx;
+        const nextY = sy - (s - 1) * ty;
 
         apply({ scale: nextScale, x: nextX, y: nextY });
+
+        /* update memo’s stored scale so the next gesture starts from here */
+        memo[2] = nextScale;
         return memo;
       },
       onDrag: ({ movement: [mx, my], memo, first, last }) => {
@@ -159,10 +164,6 @@ const CanvasStreamPlayer = forwardRef<
 
         apply({ scale: nextScale, x: nextX, y: nextY });
       },
-      onDoubleClick: ({ event }) => {
-        const zoomedIn = transform.scale > MIN_ZOOM;
-        zoomedIn ? apply({ scale: MIN_ZOOM, x: 0, y: 0 }) : apply({ scale: 2 });
-      },
     },
     {
       enabled: !isOverlayOpen,
@@ -170,8 +171,7 @@ const CanvasStreamPlayer = forwardRef<
       eventOptions: { passive: false },
       pinch: {
         scaleBounds: { min: MIN_ZOOM, max: MAX_ZOOM },
-        rubberband: 0.15, // Reduce rubberband effect for smoother experience
-        from: () => [transform.scale, 0], // Start from current scale
+        rubberband: true,
       },
     }
   );
@@ -263,15 +263,36 @@ const CanvasStreamPlayer = forwardRef<
     if (!wrapperRef.current) return;
 
     try {
+      // Lock to landscape orientation
+      const orientation = window.screen?.orientation as ScreenOrientation & {
+        lock?: (type: "landscape" | "portrait") => Promise<void>;
+        unlock?: () => Promise<void>;
+      };
       if (!isFullscreen) {
         // Entering fullscreen
         if (wrapperRef.current.requestFullscreen) {
           await wrapperRef.current.requestFullscreen();
+
+          if (orientation.lock) {
+            try {
+              await orientation?.lock("landscape");
+            } catch (orientationError) {
+              console.warn("Could not lock orientation:", orientationError);
+            }
+          }
         }
       } else {
         // Exiting fullscreen
         if (document.exitFullscreen) {
           await document.exitFullscreen();
+          // Unlock orientation
+          if (orientation?.unlock) {
+            try {
+              await orientation?.unlock();
+            } catch (orientationError) {
+              console.warn("Could not unlock orientation:", orientationError);
+            }
+          }
         }
       }
     } catch (err) {

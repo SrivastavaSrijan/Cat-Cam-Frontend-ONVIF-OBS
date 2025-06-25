@@ -156,9 +156,10 @@ const ControllerOverlay: React.FC<CameraOverlayProps> = ({
       alignItems="center"
       justifyContent="center"
       flex={isLandscape ? 1 : 1}
-      gap={2}
+      gap={isLandscape ? 2 : 3}
       width="100%"
       height={isLandscape ? "100%" : "auto"}
+      textAlign="center"
     >
       {cameraMode === "normal" && (cameraList.length > 1 || loading) && (
         <CameraText variant="adjacent" loading={loading}>
@@ -280,7 +281,7 @@ const ControllerOverlay: React.FC<CameraOverlayProps> = ({
           isOverlayMode && {
             backdropFilter: "blur(3px)",
             background:
-              "linear-gradient(45deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.4) 100%)",
+              "linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.8) 100%)",
           }),
       }}
     >
