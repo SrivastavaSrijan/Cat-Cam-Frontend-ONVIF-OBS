@@ -1,6 +1,14 @@
 import { useEffect, useRef } from "react";
 
-type EventMap = WindowEventMap & HTMLElementEventMap & DocumentEventMap;
+type EventMap = WindowEventMap &
+  HTMLElementEventMap &
+  DocumentEventMap & {
+    webkitfullscreenchange: Event;
+    mozfullscreenchange: Event;
+    MSFullscreenChange: Event;
+    enterpictureinpicture: Event;
+    leavepictureinpicture: Event;
+  };
 
 export function useEventListener<
   T extends HTMLElement | Document | Window = Window,

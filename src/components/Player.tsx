@@ -1,23 +1,8 @@
 import type React from "react";
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
-import {
-  Box,
-  IconButton,
-  Tooltip,
-  Paper,
-  Typography,
-  Stack,
-  useTheme,
-  useMediaQuery,
-  Container,
-} from "@mui/material";
-import {
-  Fullscreen,
-  FullscreenExit,
-  Refresh,
-  CameraAlt,
-} from "@mui/icons-material";
+import { Box, Paper, Stack, useTheme, useMediaQuery } from "@mui/material";
 import { useStream } from "../hooks";
+import { useEventListener } from "../hooks/useEventListener";
 import { useAppContext } from "../contexts/AppContext";
 import SkeletonLoader from "./SkeletonLoader";
 import CanvasStreamPlayer, {
@@ -31,7 +16,6 @@ interface PlayerProps {
   autoPlay?: boolean;
   controls?: boolean;
   onCameraOverlay?: () => void;
-  // Add overlay props
   overlayOpen?: boolean;
   onOverlayClose?: () => void;
   OverlayComponent?: React.ComponentType<{
@@ -39,11 +23,11 @@ interface PlayerProps {
     onClose: () => void;
     orientation?: "portrait" | "landscape" | "auto";
     isOverlayMode?: boolean;
+    usePortal?: boolean;
   }>;
-  isOverlayMode?: boolean; // Add this prop
-  /** Force 16:9 aspect ratio */
+  isOverlayMode?: boolean;
   maintainAspectRatio?: boolean;
-  aspectRatio?: number; // Added to allow custom aspect ratios
+  aspectRatio?: number;
 }
 // Simple black placeholder
 const placeholderImage =
@@ -199,97 +183,33 @@ const Player: React.FC<PlayerProps> = ({
     }
   };
 
-  const toggleFullscreen = async () => {
-    if (!containerRef.current) return;
-
-    try {
-      if (!isFullscreen) {
-        // Entering fullscreen
-        if (containerRef.current.requestFullscreen) {
-          await containerRef.current.requestFullscreen();
-        }
-        // Try to lock orientation to landscape on mobile (optional)
-        // @ts-ignore - orientation lock API not fully supported in TypeScript
-        if (window.screen?.orientation?.lock) {
-          try {
-            // @ts-ignore - orientation lock API not fully supported in TypeScript
-            await window.screen.orientation.lock("landscape");
-          } catch (orientationError) {
-            console.log(
-              "Orientation lock not supported or failed:",
-              orientationError
-            );
-            // Don't treat this as an error - orientation lock is optional
-          }
-        }
-      } else {
-        // Exiting fullscreen
-        if (document.exitFullscreen) {
-          await document.exitFullscreen();
-        }
-        // Unlock orientation when exiting fullscreen
-        // @ts-ignore - orientation lock API not fully supported in TypeScript
-        if (window.screen?.orientation?.unlock) {
-          try {
-            window.screen.orientation.unlock();
-          } catch (orientationError) {
-            console.log("Orientation unlock failed:", orientationError);
-            // Don't treat this as an error
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Fullscreen error:", err);
-      // Don't force update the state here - let the event listener handle it
-    }
-  };
-
   // Listen for fullscreen changes to update state properly
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      const isCurrentlyFullscreen = Boolean(
-        document.fullscreenElement ||
-          // @ts-ignore - for webkit browsers
-          document.webkitFullscreenElement ||
-          // @ts-ignore - for mozilla browsers
-          document.mozFullScreenElement ||
-          // @ts-ignore - for IE/Edge
-          document.msFullscreenElement
-      );
-      setIsFullscreen(isCurrentlyFullscreen);
-      if (!isCurrentlyFullscreen) {
-        if (isOverlayMode) {
-          // If exiting fullscreen in overlay mode, close the overlay
-          onOverlayClose?.();
-        }
+  const handleFullscreenChange = useCallback(() => {
+    const isCurrentlyFullscreen = Boolean(
+      document.fullscreenElement ||
+        // @ts-ignore - for webkit browsers
+        document.webkitFullscreenElement ||
+        // @ts-ignore - for mozilla browsers
+        document.mozFullScreenElement ||
+        // @ts-ignore - for IE/Edge
+        document.msFullscreenElement
+    );
+    setIsFullscreen(isCurrentlyFullscreen);
+    if (!isCurrentlyFullscreen) {
+      if (isOverlayMode) {
+        // If exiting fullscreen in overlay mode, close the overlay
+        onOverlayClose?.();
       }
-    };
-
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
-    document.addEventListener("mozfullscreenchange", handleFullscreenChange);
-    document.addEventListener("MSFullscreenChange", handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      document.removeEventListener(
-        "webkitfullscreenchange",
-        handleFullscreenChange
-      );
-      document.removeEventListener(
-        "mozfullscreenchange",
-        handleFullscreenChange
-      );
-      document.removeEventListener(
-        "MSFullscreenChange",
-        handleFullscreenChange
-      );
-    };
+    }
   }, [isOverlayMode, onOverlayClose]);
+
+  useEventListener("fullscreenchange", handleFullscreenChange, document);
+  useEventListener("webkitfullscreenchange", handleFullscreenChange, document);
+  useEventListener("mozfullscreenchange", handleFullscreenChange, document);
+  useEventListener("MSFullscreenChange", handleFullscreenChange, document);
 
   return (
     <Stack spacing={2} ref={containerRef}>
-      {/* Stream Player */}
       <Paper elevation={2}>
         <Box
           position="relative"
@@ -307,9 +227,7 @@ const Player: React.FC<PlayerProps> = ({
             gesturesEnabled={true}
             minZoom={1}
             maxZoom={4}
-            showZoomControls={isFullscreen || !isMobile}
-            showZoomLevel={isFullscreen || !isMobile}
-            showPipButton={isFullscreen || !isMobile}
+            showControls={controls}
             onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
               console.error("Stream error:", e);
               if (streamURL !== placeholderImage && streamURL) {
@@ -319,32 +237,12 @@ const Player: React.FC<PlayerProps> = ({
             style={{
               backgroundColor: "black",
             }}
+            onFullscreenChange={setIsFullscreen}
+            onRefresh={refreshStream}
+            onCameraOverlay={onCameraOverlay}
+            showCameraControls={!!onCameraOverlay}
+            error={error}
           />
-
-          {/* Render overlay inside fullscreen container */}
-          {OverlayComponent && overlayOpen && (
-            <Box
-              position="absolute"
-              top={0}
-              left={0}
-              right={0}
-              bottom={0}
-              zIndex={9999}
-              sx={{
-                backdropFilter: isOverlayMode ? "blur(3px)" : "none",
-                background: isOverlayMode
-                  ? "linear-gradient(45deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.4) 100%)"
-                  : "transparent",
-              }}
-            >
-              <OverlayComponent
-                open={overlayOpen}
-                onClose={onOverlayClose || (() => {})}
-                orientation={isFullscreen ? "landscape" : "auto"}
-                isOverlayMode={isOverlayMode}
-              />
-            </Box>
-          )}
 
           {/* Show loading skeleton when no stream URL and no error */}
           {!streamURL && !error && (
@@ -367,89 +265,15 @@ const Player: React.FC<PlayerProps> = ({
             </Box>
           )}
 
-          {/* Show error overlay */}
-          {error && (
-            <Box
-              position="absolute"
-              top={0}
-              left={0}
-              right={0}
-              bottom={0}
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              bgcolor="rgba(0,0,0,0.8)"
-            >
-              <Stack spacing={2} alignItems="center">
-                <Typography variant="body2" color="white" textAlign="center">
-                  {error}
-                </Typography>
-                <IconButton onClick={refreshStream} size="large">
-                  <Refresh />
-                </IconButton>
-              </Stack>
-            </Box>
-          )}
-
-          {controls && (error || !streamURL) && (
-            <Box position="absolute" bottom={0} left={0} right={0}>
-              <Stack
-                direction="row"
-                spacing={1}
-                alignItems="center"
-                justifyContent="space-between"
-                p={1}
-              >
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Tooltip title="Refresh Stream">
-                    <IconButton onClick={refreshStream} size="large">
-                      <Refresh />
-                    </IconButton>
-                  </Tooltip>
-                </Stack>
-
-                <Stack direction="row" spacing={1}>
-                  {onCameraOverlay && streamURL && isFullscreen && (
-                    <Tooltip title="Camera Controls">
-                      <IconButton onClick={onCameraOverlay} size="large">
-                        <CameraAlt />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                  {streamURL && (
-                    <Tooltip
-                      title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                    >
-                      <IconButton onClick={toggleFullscreen} size="large">
-                        {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                </Stack>
-              </Stack>
-            </Box>
-          )}
-
-          {/* Always show fullscreen and camera controls when stream is working */}
-          {controls && streamURL && !error && (
-            <Box position="absolute" bottom={0} right={0}>
-              <Stack direction="row" spacing={1} p={1}>
-                {onCameraOverlay && isFullscreen && (
-                  <Tooltip title="Camera Controls">
-                    <IconButton onClick={onCameraOverlay} size="large">
-                      <CameraAlt />
-                    </IconButton>
-                  </Tooltip>
-                )}
-                <Tooltip
-                  title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                >
-                  <IconButton onClick={toggleFullscreen} size="large">
-                    {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
-                  </IconButton>
-                </Tooltip>
-              </Stack>
-            </Box>
+          {/* Render overlay using portal - always use portal when overlay is open */}
+          {OverlayComponent && overlayOpen && (
+            <OverlayComponent
+              open={overlayOpen}
+              onClose={onOverlayClose || (() => {})}
+              orientation={isFullscreen ? "landscape" : "auto"}
+              isOverlayMode={isOverlayMode}
+              usePortal={true} // Always use portal to avoid stacking context issues
+            />
           )}
         </Box>
       </Paper>

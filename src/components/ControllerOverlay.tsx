@@ -1,4 +1,5 @@
 import type React from "react";
+import { createPortal } from "react-dom";
 import {
   Box,
   Typography,
@@ -53,6 +54,7 @@ interface CameraOverlayProps {
   onClose: () => void;
   orientation?: "portrait" | "landscape" | "auto";
   isOverlayMode?: boolean;
+  usePortal?: boolean; // New prop to control portal usage
 }
 
 // Reusable text components with skeleton support
@@ -173,6 +175,7 @@ const ControllerOverlay: React.FC<CameraOverlayProps> = ({
   onClose,
   orientation = "auto",
   isOverlayMode = true,
+  usePortal = false,
 }) => {
   const {
     cameraMode,
@@ -205,6 +208,7 @@ const ControllerOverlay: React.FC<CameraOverlayProps> = ({
   });
 
   // Don't render anything if not open
+  console.log("ControllerOverlay render:", { open, usePortal, isOverlayMode });
   if (!open) return null;
 
   const renderCameraSection = () => (
@@ -308,12 +312,13 @@ const ControllerOverlay: React.FC<CameraOverlayProps> = ({
     );
   };
 
-  return (
+  const overlayContent = (
     <Box
       {...swipeHandlers}
+      id="overlay-container"
       onClick={handleDoubleTap}
       sx={{
-        position: "absolute",
+        position: usePortal ? "fixed" : "absolute",
         top: 0,
         left: 0,
         right: 0,
@@ -323,9 +328,20 @@ const ControllerOverlay: React.FC<CameraOverlayProps> = ({
         backgroundColor: isOverlayMode
           ? OVERLAY_STYLES.background.overlay
           : OVERLAY_STYLES.background.standalone,
-        zIndex: 10,
+        zIndex: usePortal ? 99999 : 10,
         "& > *": { userSelect: "none" },
         padding: 2,
+        // Force a new stacking context and ensure visibility
+        transform: "translateZ(0)",
+        willChange: "transform",
+        isolation: "isolate",
+        // Add backdrop effects when using portal and overlay mode
+        ...(usePortal &&
+          isOverlayMode && {
+            backdropFilter: "blur(3px)",
+            background:
+              "linear-gradient(45deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.4) 100%)",
+          }),
       }}
     >
       {/* Swipe Indicators */}
@@ -475,6 +491,19 @@ const ControllerOverlay: React.FC<CameraOverlayProps> = ({
       </Box>
     </Box>
   );
+
+  const fullscreenElement =
+    document.fullscreenElement ||
+    // @ts-ignore
+    document.webkitFullscreenElement ||
+    // @ts-ignore
+    document.mozFullScreenElement ||
+    // @ts-ignore
+    document.msFullscreenElement;
+
+  const portalTarget = fullscreenElement || document.body;
+
+  return createPortal(overlayContent, portalTarget);
 };
 
 export default ControllerOverlay;
