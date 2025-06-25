@@ -24,30 +24,7 @@ import {
 } from "@mui/icons-material";
 import { useCameraOverlay, useEventListener, useOrientation } from "../hooks";
 import SkeletonLoader from "./SkeletonLoader";
-
-// Styling constants for consistency
-const OVERLAY_STYLES = {
-  text: {
-    primary: {
-      textShadow: "3px 3px 6px rgba(0,0,0,0.9)",
-      filter: "drop-shadow(0 0 12px rgba(255,255,255,0.4))",
-    },
-    secondary: {
-      textShadow: "2px 2px 4px rgba(0,0,0,0.8)",
-      filter: "drop-shadow(0 0 8px rgba(255,255,255,0.3))",
-    },
-    muted: {
-      textShadow: "2px 2px 4px rgba(0,0,0,0.8)",
-      filter: "drop-shadow(0 0 6px rgba(255,255,255,0.3))",
-      opacity: 0.4,
-      fontWeight: 300,
-    },
-  },
-  background: {
-    overlay: "transparent",
-    standalone: "rgba(0, 0, 0, 0.95)",
-  },
-} as const;
+import { OVERLAY_STYLES } from "../config";
 
 interface CameraOverlayProps {
   open: boolean;
@@ -68,39 +45,15 @@ const CameraText: React.FC<{
     if (variant === "current") {
       return {
         variant: size === "large" ? "h2" : size === "medium" ? "h3" : "h4",
-        color: "text.primary",
+        color: "primary.light",
         fontWeight: 200,
-        sx: {
-          letterSpacing: 2,
-          fontSize: {
-            xs:
-              size === "large"
-                ? "2.5rem"
-                : size === "medium"
-                ? "2rem"
-                : "1.5rem",
-            sm:
-              size === "large"
-                ? "3.5rem"
-                : size === "medium"
-                ? "2.5rem"
-                : "2rem",
-          },
-          ...OVERLAY_STYLES.text.primary,
-          borderRadius: 2,
-          padding: "8px 16px",
-          textAlign: "center",
-        },
+        sx: OVERLAY_STYLES.text.primary,
       };
     }
     return {
       variant: "h6",
       color: "text.secondary",
-      sx: {
-        ...OVERLAY_STYLES.text.secondary,
-        mb: variant === "adjacent" ? 2 : 0,
-        mt: variant === "adjacent" ? 2 : 0,
-      },
+      sx: OVERLAY_STYLES.text.muted,
     };
   };
 
@@ -128,27 +81,14 @@ const PresetText: React.FC<{
     if (variant === "current") {
       return {
         variant: "h4",
-        color: children ? "primary" : "text.secondary",
-        sx: {
-          fontWeight: 300,
-          letterSpacing: 1,
-          fontSize: {
-            xs: size === "medium" ? "1.5rem" : "1.2rem",
-            sm: size === "medium" ? "2rem" : "1.5rem",
-          },
-          ...OVERLAY_STYLES.text.secondary,
-          borderRadius: 1,
-          padding: "4px 12px",
-        },
+        color: children ? "primary.light" : "text.secondary",
+        sx: OVERLAY_STYLES.text.primary,
       };
     }
     return {
       variant: "h6",
       color: "text.secondary",
-      sx: {
-        ...OVERLAY_STYLES.text.muted,
-        fontSize: "0.9rem",
-      },
+      sx: OVERLAY_STYLES.text.muted,
     };
   };
 
@@ -211,12 +151,12 @@ const ControllerOverlay: React.FC<CameraOverlayProps> = ({
   if (!open) return null;
 
   const renderCameraSection = () => (
-    <Box
-      display="flex"
+    <Stack
       flexDirection="column"
       alignItems="center"
       justifyContent="center"
       flex={isLandscape ? 1 : 1}
+      gap={2}
       width="100%"
       height={isLandscape ? "100%" : "auto"}
     >
@@ -247,7 +187,7 @@ const ControllerOverlay: React.FC<CameraOverlayProps> = ({
             : ""}
         </CameraText>
       )}
-    </Box>
+    </Stack>
   );
 
   const renderPresetSection = () => {
@@ -270,12 +210,13 @@ const ControllerOverlay: React.FC<CameraOverlayProps> = ({
         width="100%"
         px={2}
       >
-        <Box
-          display="flex"
+        <Stack
           alignItems="center"
           justifyContent="space-between"
           width="100%"
           maxWidth="90vw"
+          gap={2}
+          direction="row"
         >
           <Box flex={1} textAlign="center">
             <PresetText variant="adjacent" loading={loading}>
@@ -306,7 +247,7 @@ const ControllerOverlay: React.FC<CameraOverlayProps> = ({
                 : ""}
             </PresetText>
           </Box>
-        </Box>
+        </Stack>
       </Box>
     );
   };

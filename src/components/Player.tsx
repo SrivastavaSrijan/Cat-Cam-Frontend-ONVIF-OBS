@@ -51,7 +51,6 @@ const Player: React.FC = () => {
           <CanvasStreamPlayer
             ref={playerRef}
             src={streamURL || PLAYER_CONFIG.PLACEHOLDER}
-            alt="Stream Player"
             onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
               console.error("Stream error:", e);
               if (streamURL !== PLAYER_CONFIG.PLACEHOLDER && streamURL) {
@@ -60,6 +59,7 @@ const Player: React.FC = () => {
             }}
             onRefresh={refreshStream}
             onCameraOverlay={handleOverlayOpen}
+            isOverlayOpen={overlayOpen}
             error={error}
           />
 

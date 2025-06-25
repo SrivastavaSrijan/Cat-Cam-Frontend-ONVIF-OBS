@@ -10,15 +10,6 @@ export interface CanvasStreamPlayerRef {
   setSrc(src: string): void;
 }
 
-export interface CanvasStreamPlayerProps {
-  src: string;
-  alt?: string;
-  onError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
-  onRefresh?: () => Promise<void>;
-  onCameraOverlay?: () => void;
-  error?: string | null;
-}
-
 /* ------------------------------------------------------------------ */
 /* Helpers                                                            */
 /* ------------------------------------------------------------------ */

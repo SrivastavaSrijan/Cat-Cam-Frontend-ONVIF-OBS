@@ -1,3 +1,5 @@
+import type { SxProps } from "@mui/material";
+
 export const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL ||
   "https://ssvcam.srijansrivastava.com/api";
@@ -71,4 +73,33 @@ export const PLAYER_CONFIG = {
   MIN_PIP_HEIGHT: 720, // px
   MIN_ZOOM: 1,
   MAX_ZOOM: 4,
+  CONTROLS_STYLES: {
+    position: "absolute",
+    zIndex: 10,
+    backdropFilter: "blur(4px)",
+    backgroundColor: "rgba(0, 0, 0, 0.2)",
+    borderRadius: 8,
+    px: 1,
+    py: 0.5,
+  } satisfies SxProps,
 };
+
+// Styling constants for consistency
+export const OVERLAY_STYLES = {
+  text: {
+    primary: {
+      textShadow: "3px 3px 6px rgba(0,0,0,0.9)",
+      filter: "drop-shadow(0 0 12px rgba(255,255,255,0.4))",
+    },
+
+    muted: {
+      textShadow: "2px 2px 4px rgba(0,0,0,0.8)",
+      filter: "drop-shadow(0 0 6px rgba(255,255,255,0.3))",
+      fontWeight: 300,
+    },
+  },
+  background: {
+    overlay: "transparent",
+    standalone: "rgba(0, 0, 0, 0.95)",
+  },
+} as const;
