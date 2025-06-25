@@ -73,6 +73,7 @@ export const PLAYER_CONFIG = {
   MIN_PIP_HEIGHT: 720, // px
   MIN_ZOOM: 1,
   MAX_ZOOM: 4,
+  PINCH_SENSITIVITY: 0.1,
   CONTROLS_STYLES: {
     position: "absolute",
     zIndex: 10,

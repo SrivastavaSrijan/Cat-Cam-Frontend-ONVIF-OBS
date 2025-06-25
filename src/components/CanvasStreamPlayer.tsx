@@ -22,7 +22,13 @@ import { useEventListener } from "../hooks/useEventListener";
 import { type CanvasStreamPlayerRef, getDisplayedDims, clamp } from "../hooks";
 import { PLAYER_CONFIG } from "../config";
 
-const { MIN_ZOOM, MAX_ZOOM, MIN_PIP_HEIGHT, CONTROLS_STYLES } = PLAYER_CONFIG;
+const {
+  MIN_ZOOM,
+  MAX_ZOOM,
+  MIN_PIP_HEIGHT,
+  CONTROLS_STYLES,
+  PINCH_SENSITIVITY,
+} = PLAYER_CONFIG;
 
 interface CanvasStreamPlayerProps {
   src: string;
@@ -118,8 +124,7 @@ const CanvasStreamPlayer = forwardRef<
         }
 
         const [sx, sy, ss, tx, ty] = memo as number[];
-        let nextScale = ss * s; // continuous, no jump
-
+        let nextScale = clamp(ss * s ** PINCH_SENSITIVITY, MIN_ZOOM, MAX_ZOOM);
         if (last) nextScale = clamp(nextScale, MIN_ZOOM, MAX_ZOOM); // clamp only at end
 
         const nextX = sx - (s - 1) * tx;
@@ -177,8 +182,8 @@ const CanvasStreamPlayer = forwardRef<
   );
 
   /* -------------------------- Buttons ------------------------------ */
-  const zoomIn = () => apply({ scale: transform.scale * 1.25 });
-  const zoomOut = () => apply({ scale: transform.scale * 0.8 });
+  const zoomIn = () => apply({ scale: transform.scale * 1.1 });
+  const zoomOut = () => apply({ scale: transform.scale * 0.9 });
   const reset = () => apply({ scale: MIN_ZOOM, x: 0, y: 0 });
 
   /* -------------------------- PIP ---------------------------------- */
