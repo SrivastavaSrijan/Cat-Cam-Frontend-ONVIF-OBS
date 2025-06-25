@@ -12,7 +12,6 @@ import {
 import { ThemeProvider } from "@mui/material/styles";
 import darkTheme from "./theme";
 import {
-  Navbar,
   CameraSelector,
   ActionBar,
   Status,
@@ -24,8 +23,7 @@ import {
   Presets,
   PlayerWithController,
 } from "./components";
-import { AppProvider } from "./contexts/AppContext";
-import { NotificationProvider } from "./contexts";
+import { NotificationProvider, AppProvider } from "./contexts";
 import MovementControls from "./components/MovementControls";
 
 const App: React.FC = () => {
@@ -100,15 +98,17 @@ const App: React.FC = () => {
       <NotificationProvider>
         <AppProvider>
           <div className="App">
-            <Navbar value={value} handleChange={handleChange} />
-
             <Container maxWidth="sm">
-              <Box py={3} mx="auto">
+              <Box py={{ xs: 3, md: 4 }} mx="auto">
                 {renderTabContent()}
               </Box>
             </Container>
 
-            <Fabs onCameraOverlayOpen={setCameraOverlayOpen} />
+            <Fabs
+              onCameraOverlayOpen={setCameraOverlayOpen}
+              currentTab={value}
+              onTabChange={handleChange}
+            />
 
             {/* Standalone App-level Camera Overlay */}
             <ControllerOverlay

@@ -1,4 +1,11 @@
-import { Gesture, MoreVert, Refresh } from "@mui/icons-material";
+import {
+  Gesture,
+  MoreVert,
+  Refresh,
+  Videocam,
+  Analytics,
+  VideoSettings,
+} from "@mui/icons-material";
 import {
   Fab,
   CircularProgress,
@@ -7,17 +14,36 @@ import {
   ListItemIcon,
   ListItemText,
   Checkbox,
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  FormGroup,
+  FormControlLabel,
+  Typography,
 } from "@mui/material";
-import { useOBSControl } from "../hooks";
-import { useStream } from "../hooks/useStream";
-import { useCameraControl } from "../hooks";
+import { useOBSControl, usePWABackgroundSync } from "../hooks";
+
+import { useCameraControl, useStream } from "../hooks";
 import { useState } from "react";
 
 interface FabsProps {
   onCameraOverlayOpen: (value: boolean) => void;
+  currentTab: number;
+  onTabChange: (event: React.SyntheticEvent, newValue: number) => void;
 }
-const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
+
+const navigationItems = [
+  { value: 1, icon: <Videocam />, label: "Camera" },
+  { value: 2, icon: <Analytics />, label: "Analytics" },
+  { value: 3, icon: <VideoSettings />, label: "Settings" },
+];
+
+const Fabs = ({ onCameraOverlayOpen, currentTab, onTabChange }: FabsProps) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [refreshDialogOpen, setRefreshDialogOpen] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState({
     rtsp: false,
     obs: false,
@@ -25,13 +51,41 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
     camera: false,
   });
 
-  // Handle floating action button menu (short press)
+  // Set up PWA background sync
+  usePWABackgroundSync();
+
+  // Handle floating action button menu
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
 
   const handleMenuClose = () => {
     setAnchorEl(null);
+  };
+
+  const handleRefreshDialogOpen = () => {
+    setRefreshDialogOpen(true);
+    handleMenuClose();
+  };
+
+  const handleRefreshDialogClose = () => {
+    setRefreshDialogOpen(false);
+    setSelectedOptions({
+      rtsp: false,
+      obs: false,
+      stream: false,
+      camera: false,
+    });
+  };
+
+  const handleNavigationChange = (newValue: number) => {
+    onTabChange({} as React.SyntheticEvent, newValue);
+    handleMenuClose();
+  };
+
+  const handleGestureControl = () => {
+    onCameraOverlayOpen(true);
+    handleMenuClose();
   };
 
   const handleOptionChange = (option: keyof typeof selectedOptions) => {
@@ -57,8 +111,7 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
   };
 
   const handleRefreshSelected = async () => {
-    handleMenuClose();
-
+    handleRefreshDialogClose();
     try {
       // If OBS reconnect is selected, do that first
       if (selectedOptions.obs) {
@@ -74,14 +127,6 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
       if (operations.length > 0) {
         await Promise.all(operations);
       }
-
-      // Reset selections after handling
-      setSelectedOptions({
-        rtsp: false,
-        obs: false,
-        stream: false,
-        camera: false,
-      });
     } catch (error) {
       console.error("Error during refresh operations:", error);
     }
@@ -89,31 +134,16 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
 
   return (
     <>
-      {/* Floating Action Buttons */}
+      {/* Single Floating Action Button */}
       <Fab
         color="primary"
-        size="small"
-        onClick={() => onCameraOverlayOpen(true)}
-        disabled={obsLoading || streamLoading || cameraLoading}
-        sx={{
-          position: "fixed",
-          bottom: 16,
-          right: 16,
-          zIndex: 1000,
-        }}
-      >
-        <Gesture fontSize="medium" />
-      </Fab>
-
-      <Fab
-        color="primary"
-        size="small"
+        size="medium"
         onClick={handleMenuOpen}
         disabled={obsLoading || streamLoading || cameraLoading}
         sx={{
           position: "fixed",
           bottom: 16,
-          right: 72,
+          right: 16,
           zIndex: 1000,
         }}
       >
@@ -124,7 +154,7 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
         )}
       </Fab>
 
-      {/* Action Menu with Checkboxes */}
+      {/* Comprehensive Menu */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
@@ -137,85 +167,126 @@ const Fabs = ({ onCameraOverlayOpen }: FabsProps) => {
           vertical: "bottom",
           horizontal: "right",
         }}
+        PaperProps={{
+          sx: { minWidth: 200 },
+        }}
       >
-        <MenuItem
-          onClick={() => handleOptionChange("rtsp")}
-          disabled={obsLoading || streamLoading || cameraLoading}
+        {/* Navigation Section */}
+        <Typography
+          variant="overline"
+          sx={{ px: 2, py: 1, color: "text.secondary" }}
         >
+          Navigation
+        </Typography>
+        {navigationItems.map((item) => (
+          <MenuItem
+            key={item.value}
+            onClick={() => handleNavigationChange(item.value)}
+            selected={item.value === currentTab}
+            sx={{ pl: 3 }}
+          >
+            <ListItemIcon>{item.icon}</ListItemIcon>
+            <ListItemText primary={item.label} />
+          </MenuItem>
+        ))}
+
+        <Divider sx={{ my: 1 }} />
+
+        {/* Gesture Control Section */}
+        <Typography
+          variant="overline"
+          sx={{ px: 2, py: 1, color: "text.secondary" }}
+        >
+          Controls
+        </Typography>
+        <MenuItem onClick={handleGestureControl} sx={{ pl: 3 }}>
           <ListItemIcon>
-            <Checkbox
-              edge="start"
-              checked={selectedOptions.rtsp}
-              tabIndex={-1}
-              disableRipple
-            />
+            <Gesture />
           </ListItemIcon>
-          <ListItemText primary="RTSP" />
+          <ListItemText primary="Gesture Control" />
         </MenuItem>
 
-        <MenuItem
-          onClick={() => handleOptionChange("obs")}
-          disabled={obsLoading || streamLoading || cameraLoading}
-        >
-          <ListItemIcon>
-            <Checkbox
-              edge="start"
-              checked={selectedOptions.obs}
-              tabIndex={-1}
-              disableRipple
-            />
-          </ListItemIcon>
-          <ListItemText primary="OBS" />
-        </MenuItem>
+        <Divider sx={{ my: 1 }} />
 
-        <MenuItem
-          onClick={() => handleOptionChange("stream")}
-          disabled={obsLoading || streamLoading || cameraLoading}
+        {/* Refresh Section */}
+        <Typography
+          variant="overline"
+          sx={{ px: 2, py: 1, color: "text.secondary" }}
         >
-          <ListItemIcon>
-            <Checkbox
-              edge="start"
-              checked={selectedOptions.stream}
-              tabIndex={-1}
-              disableRipple
-            />
-          </ListItemIcon>
-          <ListItemText primary="Stream" />
-        </MenuItem>
-
-        <MenuItem
-          onClick={() => handleOptionChange("camera")}
-          disabled={obsLoading || streamLoading || cameraLoading}
-        >
-          <ListItemIcon>
-            <Checkbox
-              edge="start"
-              checked={selectedOptions.camera}
-              tabIndex={-1}
-              disableRipple
-            />
-          </ListItemIcon>
-          <ListItemText primary="Camera" />
-        </MenuItem>
-
-        <MenuItem
-          onClick={handleRefreshSelected}
-          disabled={
-            obsLoading ||
-            streamLoading ||
-            cameraLoading ||
-            (!selectedOptions.rtsp &&
-              !selectedOptions.obs &&
-              !selectedOptions.stream &&
-              !selectedOptions.camera)
-          }
-        >
+          Refresh
+        </Typography>
+        <MenuItem onClick={handleRefreshDialogOpen} sx={{ pl: 3 }}>
           <ListItemIcon>
             <Refresh />
           </ListItemIcon>
-          <ListItemText primary="Refresh" />
+          <ListItemText primary="Refresh Options" />
         </MenuItem>
       </Menu>
+
+      {/* Refresh Dialog */}
+      <Dialog
+        open={refreshDialogOpen}
+        onClose={handleRefreshDialogClose}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Refresh Options</DialogTitle>
+        <DialogContent>
+          <FormGroup>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={selectedOptions.rtsp}
+                  onChange={() => handleOptionChange("rtsp")}
+                />
+              }
+              label="RTSP"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={selectedOptions.obs}
+                  onChange={() => handleOptionChange("obs")}
+                />
+              }
+              label="OBS"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={selectedOptions.stream}
+                  onChange={() => handleOptionChange("stream")}
+                />
+              }
+              label="Stream"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={selectedOptions.camera}
+                  onChange={() => handleOptionChange("camera")}
+                />
+              }
+              label="Camera"
+            />
+          </FormGroup>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleRefreshDialogClose}>Cancel</Button>
+          <Button
+            onClick={handleRefreshSelected}
+            variant="contained"
+            disabled={
+              !selectedOptions.rtsp &&
+              !selectedOptions.obs &&
+              !selectedOptions.stream &&
+              !selectedOptions.camera
+            }
+          >
+            Refresh
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };

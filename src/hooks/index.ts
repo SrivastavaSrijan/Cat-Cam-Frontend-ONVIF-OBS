@@ -10,3 +10,4 @@ export { useOrientation } from "./useOrientation";
 export { useEventListener } from "./useEventListener";
 export { useMovementControls } from "./useMovementControls";
 export { usePWABackgroundSync } from "./usePWABackgroundSync";
+export { usePictureInPicture } from "./usePictureInPicture";

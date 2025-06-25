@@ -1,5 +1,5 @@
 import type React from "react";
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import {
   Box,
   IconButton,
@@ -7,6 +7,9 @@ import {
   Paper,
   Typography,
   Stack,
+  useTheme,
+  useMediaQuery,
+  Container,
 } from "@mui/material";
 import {
   Fullscreen,
@@ -17,6 +20,9 @@ import {
 import { useStream } from "../hooks";
 import { useAppContext } from "../contexts/AppContext";
 import SkeletonLoader from "./SkeletonLoader";
+import CanvasStreamPlayer, {
+  type CanvasStreamPlayerRef,
+} from "./CanvasStreamPlayer";
 
 interface PlayerProps {
   title?: string;
@@ -35,6 +41,9 @@ interface PlayerProps {
     isOverlayMode?: boolean;
   }>;
   isOverlayMode?: boolean; // Add this prop
+  /** Force 16:9 aspect ratio */
+  maintainAspectRatio?: boolean;
+  aspectRatio?: number; // Added to allow custom aspect ratios
 }
 // Simple black placeholder
 const placeholderImage =
@@ -51,14 +60,64 @@ const Player: React.FC<PlayerProps> = ({
   onOverlayClose,
   OverlayComponent,
   isOverlayMode = true, // Default to overlay mode
+  maintainAspectRatio = true, // Default to maintain aspect ratio
+  aspectRatio = 16 / 9, // Default to 16:9 aspect ratio
 }) => {
+  const theme = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
+  const canvasPlayerRef = useRef<CanvasStreamPlayerRef>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  // Calculate proper height based on aspect ratio and container width
+  const playerHeight = useMemo(() => {
+    if (isFullscreen) return "100vh";
+    if (!maintainAspectRatio) return height;
+
+    // For fixed width, calculate height based on aspect ratio
+    if (typeof width === "number") {
+      return width / aspectRatio;
+    }
+
+    // For percentage or auto width, use container width if available
+    if (containerWidth > 0) {
+      return containerWidth / aspectRatio;
+    }
+
+    // Fallback if we can't determine container width
+    return typeof height === "number" ? height : 500;
+  }, [
+    width,
+    height,
+    maintainAspectRatio,
+    isFullscreen,
+    aspectRatio,
+    containerWidth,
+  ]);
+
+  // Measure container width to calculate aspect ratio
+  useEffect(() => {
+    if (!containerRef.current || !maintainAspectRatio) return;
+
+    const updateWidth = () => {
+      const width = containerRef.current?.offsetWidth || 0;
+      setContainerWidth(width);
+    };
+
+    // Initial measurement
+    updateWidth();
+
+    // Set up resize observer for responsive behavior
+    const resizeObserver = new ResizeObserver(updateWidth);
+    resizeObserver.observe(containerRef.current);
+
+    return () => resizeObserver.disconnect();
+  }, [maintainAspectRatio]);
 
   // Use MJPEG stream hook
-  const { streamURL, setStreamURL, streamPlayerRef, isStreaming } =
-    useAppContext();
+  const { streamURL, setStreamURL, isStreaming } = useAppContext();
   const { stopStream, startStream, getStatus } = useStream();
 
   // Auto-start stream once when component mounts if autoPlay is enabled
@@ -120,8 +179,8 @@ const Player: React.FC<PlayerProps> = ({
       }
 
       // If stream is running but we have an error, restart it
-      if (streamPlayerRef.current) {
-        streamPlayerRef.current.src = placeholderImage;
+      if (canvasPlayerRef.current) {
+        canvasPlayerRef.current.setSrc(placeholderImage);
       }
 
       await stopStream();
@@ -229,34 +288,36 @@ const Player: React.FC<PlayerProps> = ({
   }, [isOverlayMode, onOverlayClose]);
 
   return (
-    <Stack spacing={2}>
-      {/* Stream Controls */}
-
+    <Stack spacing={2} ref={containerRef}>
       {/* Stream Player */}
       <Paper elevation={2}>
         <Box
-          ref={containerRef}
           position="relative"
-          width={isFullscreen ? "100vw" : width}
-          height={isFullscreen ? "100vh" : height}
+          width={isFullscreen ? "100vw" : "100%"}
+          height={isFullscreen ? "100vh" : playerHeight}
           bgcolor="black"
+          overflow="hidden"
         >
-          <img
-            ref={streamPlayerRef}
+          <CanvasStreamPlayer
+            ref={canvasPlayerRef}
             src={streamURL || placeholderImage}
             alt={title}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-              backgroundColor: "black",
-              display: "block",
-            }}
-            onError={(e) => {
+            width="100%"
+            height="100%"
+            gesturesEnabled={true}
+            minZoom={1}
+            maxZoom={4}
+            showZoomControls={isFullscreen || !isMobile}
+            showZoomLevel={isFullscreen || !isMobile}
+            showPipButton={isFullscreen || !isMobile}
+            onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
               console.error("Stream error:", e);
               if (streamURL !== placeholderImage && streamURL) {
                 setError(`Failed to load stream from: ${streamURL}`);
               }
+            }}
+            style={{
+              backgroundColor: "black",
             }}
           />
 

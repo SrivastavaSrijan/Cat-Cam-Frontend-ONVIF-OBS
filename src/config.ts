@@ -59,6 +59,6 @@ export const MJPEG_ENDPOINTS = {
 } as const;
 
 export const SOURCE_NAMES = {
-  WAIT: "Please Wait!",
+  WAIT: "Please Wait",
   MAIN: "Mosaic",
 };

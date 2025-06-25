@@ -106,7 +106,7 @@ export const useOBSControl = (): UseOBSControlReturn => {
       setTimeout(async () => {
         await switchScene(SOURCE_NAMES.MAIN);
         resolve();
-      }, 3000);
+      }, 10000);
     });
   };
 
