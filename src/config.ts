@@ -73,15 +73,13 @@ export const PLAYER_CONFIG = {
   MIN_PIP_HEIGHT: 720, // px
   MIN_ZOOM: 1,
   MAX_ZOOM: 4,
-  PINCH_SENSITIVITY: 0.1,
+  PINCH_SENSITIVITY: 0.05,
   CONTROLS_STYLES: {
     position: "absolute",
     zIndex: 10,
-    backdropFilter: "blur(4px)",
-    backgroundColor: "rgba(0, 0, 0, 0.2)",
+    backdropFilter: "blur(2px)",
+    backgroundColor: "rgba(0, 0, 0, 0.05)",
     borderRadius: 8,
-    px: 1,
-    py: 0.5,
   } satisfies SxProps,
 };
 
